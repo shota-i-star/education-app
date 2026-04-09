@@ -1295,15 +1295,17 @@
           .map(function(cd) { return cd.category_id; });
         var deptCats = (categories || []).filter(function(c) { return deptCatIds.indexOf(c.id) !== -1; });
 
-        var gradesHtml = grades.map(function(grade) {
-          var gradeBodyId = 'content-grade-' + dept.id + '-' + grade;
+        // カテゴリ単位でカードを描画（項目が0件でも必ず表示）
+        var catsHtml = deptCats.map(function(cat) {
+          var catBodyId = 'content-cat-' + cat.id;
+          var catAllItems = (items || []).filter(function(i) { return i.category_id === cat.id; });
 
-          var gradeCatsHtml = deptCats.map(function(cat) {
-            var catBodyId = 'content-cat-' + cat.id;
-            var catItems = (items || []).filter(function(i) { return i.category_id === cat.id && i.grade === grade; });
-            if (catItems.length === 0) return '';
+          // 等級ごとに項目を表示
+          var itemRowsHtml = grades.map(function(grade) {
+            var gradeItems = catAllItems.filter(function(i) { return i.grade === grade; });
+            if (gradeItems.length === 0) return '';
 
-            var itemRows = catItems.map(function(item) {
+            var rows = gradeItems.map(function(item) {
               var itemSteps = (steps || []).filter(function(s) { return s.item_id === item.id; });
               var stepTags = itemSteps.map(function(s) {
                 return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#eef0fa;color:#495e9f;border-radius:20px;font-size:11px;margin:2px">' +
@@ -1331,42 +1333,37 @@
               '</tr>';
             }).join('');
 
-            var dupBtn = canDuplicate
-              ? '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openDuplicateCategoryModal(' + cat.id + ', \'' + cat.name.replace(/'/g,"&#39;") + '\')">複製</button>'
-              : '';
-
-            return '<div class="card" style="margin-bottom:12px">' +
-              '<div class="card-header" style="cursor:pointer" onclick="toggleSection(\'' + catBodyId + '\')">' +
-                '<div style="display:flex;align-items:center;gap:6px">' +
-                  '<span class="toggle-arrow" id="arr-' + catBodyId + '">▾</span>' +
-                  '<h3>' + cat.name + '</h3>' +
-                '</div>' +
-                '<div style="display:flex;gap:6px" onclick="event.stopPropagation()">' +
-                  dupBtn +
-                  '<button class="btn btn-danger btn-sm" onclick="deleteCategory(' + cat.id + ', \'' + cat.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
-                '</div>' +
-              '</div>' +
-              '<div id="' + catBodyId + '">' +
-                '<div class="card-body">' +
-                  '<table><thead><tr><th>項目名</th><th>対象等級</th><th>ステップ</th><th></th></tr></thead>' +
-                    '<tbody>' + itemRows + '</tbody>' +
-                  '</table>' +
-                  '<div class="form-row" style="margin-top:12px">' +
-                    '<button class="btn btn-secondary btn-sm" onclick="openAddItemModal(' + cat.id + ')">＋ 項目を追加</button>' +
-                  '</div>' +
-                '</div>' +
-              '</div>' +
-            '</div>';
+            return '<div style="margin-bottom:8px;font-size:12px;font-weight:700;color:#6b7280;padding:4px 0 2px">' + grade + '等級</div>' +
+              '<table><thead><tr><th>項目名</th><th>対象等級</th><th>ステップ</th><th></th></tr></thead>' +
+                '<tbody>' + rows + '</tbody>' +
+              '</table>';
           }).join('');
 
-          if (!gradeCatsHtml.trim()) return '';
+          var dupBtn = canDuplicate
+            ? '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openDuplicateCategoryModal(' + cat.id + ', \'' + cat.name.replace(/'/g,"&#39;") + '\')">複製</button>'
+            : '';
 
-          return '<div style="margin-bottom:16px">' +
-            '<div class="toggle-grade-header" onclick="toggleSection(\'' + gradeBodyId + '\')">' +
-              '<span class="toggle-arrow" id="arr-' + gradeBodyId + '">▾</span>' +
-              grade + '等級' +
+          return '<div class="card" style="margin-bottom:12px">' +
+            '<div class="card-header" style="cursor:pointer" onclick="toggleSection(\'' + catBodyId + '\')">' +
+              '<div style="display:flex;align-items:center;gap:6px">' +
+                '<span class="toggle-arrow" id="arr-' + catBodyId + '">▾</span>' +
+                '<h3>' + cat.name + '</h3>' +
+              '</div>' +
+              '<div style="display:flex;gap:6px" onclick="event.stopPropagation()">' +
+                dupBtn +
+                '<button class="btn btn-danger btn-sm" onclick="deleteCategory(' + cat.id + ', \'' + cat.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
+              '</div>' +
             '</div>' +
-            '<div id="' + gradeBodyId + '">' + gradeCatsHtml + '</div>' +
+            '<div id="' + catBodyId + '">' +
+              '<div class="card-body">' +
+                (itemRowsHtml.trim()
+                  ? itemRowsHtml
+                  : '<div style="font-size:13px;color:#9ca3af;padding:4px 0 8px">項目がまだ登録されていません</div>') +
+                '<div class="form-row" style="margin-top:12px">' +
+                  '<button class="btn btn-secondary btn-sm" onclick="openAddItemModal(' + cat.id + ')">＋ 項目を追加</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
           '</div>';
         }).join('');
 
@@ -1379,7 +1376,7 @@
           '</div>' +
           '<div id="' + deptBodyId + '">' +
             '<div class="dept-card-body">' +
-              (gradesHtml.trim() ? gradesHtml : '<div style="font-size:13px;color:#9ca3af;padding:8px 0">カテゴリが登録されていません</div>') +
+              (catsHtml.trim() ? catsHtml : '<div style="font-size:13px;color:#9ca3af;padding:8px 0">カテゴリが登録されていません</div>') +
             '</div>' +
           '</div>' +
         '</div>';
