@@ -90,7 +90,7 @@
   <header>
     <span class="app-name">飲食事業部 教育管理アプリ</span>
     <div class="user-info">
-      <span class="role-badge" id="role-badge">上司</span>
+      <span class="role-badge" id="role-badge">MG</span>
       <span id="header-name">読み込み中...</span>
       <button class="notif-btn" onclick="toggleGradeupPanel()">
         🔔 昇級申請
@@ -190,9 +190,9 @@
       currentDeptId = profile.department_id;
 
       document.getElementById('header-name').textContent = profile.name;
-      var roleLabels = { 'manager': '上司', 'admin': '管理者', 'manager_admin': '上司 / 管理者', 'dept_admin': '部署管理者' };
-      document.getElementById('role-badge').textContent = roleLabels[profile.role] || '上司';
-      if (profile.role === 'manager_admin' || profile.role === 'admin' || profile.role === 'dept_admin') {
+      var roleLabels = { 'manager': 'MG', 'manager_admin': '全権管理者', 'dept_admin': '部署管理者' };
+      document.getElementById('role-badge').textContent = roleLabels[profile.role] || 'MG';
+      if (profile.role === 'dept_admin') {
         document.getElementById('admin-link').style.display = 'inline';
       }
 

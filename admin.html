@@ -112,7 +112,7 @@
   <header>
     <span class="app-name">飲食事業部 教育管理アプリ</span>
     <div class="user-info">
-      <span class="role-badge">管理者</span>
+      <span class="role-badge">全権管理者</span>
       <span id="header-name">読み込み中...</span>
       <button class="btn-logout" onclick="logout()">ログアウト</button>
     </div>
@@ -468,8 +468,7 @@
         <!-- ★変更：dept_admin を追加・onchange で部署欄を表示切替 -->
         <select id="add-role" onchange="toggleDeptField()">
           <option value="member">メンバー</option>
-          <option value="manager">上司</option>
-          <option value="admin">管理者</option>
+          <option value="manager">MG</option>
           <option value="manager_admin">全権管理者</option>
           <option value="dept_admin">部署管理者</option>
         </select>
@@ -568,16 +567,16 @@
       currentRole   = profile.role;
       currentDeptId = profile.department_id;
 
-      // admin・manager_admin・dept_admin のみ許可（それ以外はトップへ）
-      if (profile.role !== 'admin' && profile.role !== 'manager_admin' && profile.role !== 'dept_admin') {
+      // manager_admin・dept_admin のみ許可（それ以外はトップへ）
+      if (profile.role !== 'manager_admin' && profile.role !== 'dept_admin') {
         window.location.href = 'member_top.html';
         return;
       }
 
       document.getElementById('header-name').textContent = profile.name;
       // ヘッダーのバッジを役割に合わせて更新する
-      var roleLabels = { admin: '管理者', manager_admin: '全権管理者', dept_admin: '部署管理者' };
-      document.querySelector('.role-badge').textContent = roleLabels[profile.role] || '管理者';
+      var roleLabels = { manager_admin: '全権管理者', dept_admin: '部署管理者' };
+      document.querySelector('.role-badge').textContent = roleLabels[profile.role] || '全権管理者';
 
       await initDeptFilter(); // dept_admin の場合: allowedMemberIds を先に確定させる
 
@@ -628,8 +627,7 @@
 
       var roleLabels = {
         member:        'メンバー',
-        manager:       '上司',
-        admin:         '管理者',
+        manager:       'MG',
         manager_admin: '全権管理者',
         dept_admin:    '部署管理者'
       };

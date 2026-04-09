@@ -129,7 +129,7 @@
   <header>
     <span class="app-name">飲食事業部 教育管理アプリ</span>
     <div class="user-info">
-      <span class="role-badge" id="role-badge">上司</span>
+      <span class="role-badge" id="role-badge">MG</span>
       <span id="header-name">読み込み中...</span>
       <button class="btn-logout" onclick="logout()">ログアウト</button>
     </div>
@@ -218,13 +218,12 @@
 
       document.getElementById('header-name').textContent = profile.name;
       var roleLabels = {
-            member:     'メンバー',
-            manager:    '上司',
-            admin:      '管理者',
+            member:        'メンバー',
+            manager:       'MG',
             manager_admin: '全権管理者',
-            dept_admin: '部署管理者'
+            dept_admin:    '部署管理者'
             };
-      document.getElementById('role-badge').textContent = roleLabels[profile.role] || '上司';
+      document.getElementById('role-badge').textContent = roleLabels[profile.role] || 'MG';
       CURRENT_USER_NAME = profile.name;
 
       // URLからメンバーIDを取得する
