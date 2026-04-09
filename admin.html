@@ -341,6 +341,21 @@
     </div>
   </div>
 
+  <!-- 項目名編集モーダル -->
+  <div class="modal-overlay" id="edit-item-modal">
+    <div class="modal">
+      <h3>項目名を編集</h3>
+      <div class="modal-field">
+        <label>項目名</label>
+        <input type="text" id="edit-item-name" placeholder="項目名を入力">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('edit-item-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveItemName()">保存する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 項目追加モーダル（ステップ同時追加対応） -->
   <div class="modal-overlay" id="add-item-modal">
     <div class="modal" style="max-width:520px">
@@ -1329,7 +1344,11 @@
                     '<button class="btn btn-secondary btn-sm" onclick="openAddStepModal(' + item.id + ')">＋ ステップ追加</button>' +
                   '</div>' +
                 '</td>' +
-                '<td><button class="btn btn-danger btn-sm" onclick="deleteItem(' + item.id + ', \'' + item.name + '\')">削除</button></td>' +
+                '<td><div class="td-actions">' +
+                  '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="openEditItemModal(' + item.id + ', \'' + item.name.replace(/'/g,"&#39;") + '\')">編集</button>' +
+                  '<button class="btn btn-sm" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" onclick="duplicateItem(' + item.id + ', \'' + item.name.replace(/'/g,"&#39;") + '\')">複製</button>' +
+                  '<button class="btn btn-danger btn-sm" onclick="deleteItem(' + item.id + ', \'' + item.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
+                '</div></td>' +
               '</tr>';
             }).join('');
 
@@ -1627,6 +1646,68 @@
       var { error } = await client.from('check_items').delete().eq('id', itemId);
       if (error) { alert('削除エラー：' + error.message); return; }
       showToast(name + ' を削除しました');
+      loadContent();
+    }
+
+    // ============================================
+    // 項目名編集
+    // ============================================
+    var editItemTargetId = null;
+
+    function openEditItemModal(itemId, currentName) {
+      editItemTargetId = itemId;
+      document.getElementById('edit-item-name').value = currentName;
+      document.getElementById('edit-item-modal').classList.add('show');
+    }
+
+    async function saveItemName() {
+      var newName = document.getElementById('edit-item-name').value.trim();
+      if (!newName) { alert('項目名を入力してください'); return; }
+      var { error } = await client.from('check_items').update({ name: newName }).eq('id', editItemTargetId);
+      if (error) { alert('更新エラー：' + error.message); return; }
+      closeModal('edit-item-modal');
+      showToast('項目名を更新しました ✓');
+      loadContent();
+    }
+
+    // ============================================
+    // 項目複製（ステップごとコピー）
+    // ============================================
+    async function duplicateItem(itemId, itemName) {
+      // 元の項目情報を取得
+      var { data: origItem } = await client
+        .from('check_items').select('id, name, grade, category_id').eq('id', itemId).limit(1);
+      if (!origItem || origItem.length === 0) { alert('複製元の取得に失敗しました'); return; }
+      var orig = origItem[0];
+
+      // 新しい項目を挿入（名前に「（コピー）」を付ける）
+      var { data: newItem, error: itemErr } = await client
+        .from('check_items')
+        .insert({ name: orig.name + '（コピー）', grade: orig.grade, category_id: orig.category_id })
+        .select().limit(1);
+      if (itemErr) { alert('複製エラー：' + itemErr.message); return; }
+
+      // 元のステップを取得して新しい項目にコピー
+      var newId = (newItem && newItem[0]) ? newItem[0].id : null;
+      if (!newId) {
+        // RLS で返らない場合は SELECT で取得
+        var { data: fetched } = await client
+          .from('check_items').select('id').eq('name', orig.name + '（コピー）')
+          .eq('category_id', orig.category_id).order('id', { ascending: false }).limit(1);
+        newId = fetched && fetched[0] ? fetched[0].id : null;
+      }
+      if (!newId) { alert('複製した項目のIDが取得できませんでした'); return; }
+
+      var { data: origSteps } = await client
+        .from('check_steps').select('name, order_no').eq('item_id', itemId).order('order_no');
+      if (origSteps && origSteps.length > 0) {
+        var stepsToInsert = origSteps.map(function(s) {
+          return { item_id: newId, name: s.name, order_no: s.order_no };
+        });
+        await client.from('check_steps').insert(stepsToInsert);
+      }
+
+      showToast(orig.name + ' を複製しました ✓');
       loadContent();
     }
 
