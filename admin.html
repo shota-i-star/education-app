@@ -584,21 +584,16 @@
     var allowedMemberIds = null; // null = 全員 / 配列 = 自部署メンバーのみ
 
     // dept_admin の場合に「自部署のメンバーID」を事前に取得して allowedMemberIds に格納する
+    // department_id で直接フィルタする（member / manager / dept_admin を対象）
     async function initDeptFilter() {
       if (currentRole !== 'dept_admin' || !currentDeptId) return;
 
-      // 自部署のエリアIDを取得
-      var { data: deptAreas } = await client.from('areas').select('id').eq('department_id', currentDeptId);
-      var deptAreaIds = (deptAreas || []).map(function(a) { return a.id; });
-      if (deptAreaIds.length === 0) { allowedMemberIds = []; return; }
+      var { data: deptMembers } = await client
+        .from('user_profiles')
+        .select('id')
+        .eq('department_id', currentDeptId)
+        .in('role', ['member', 'manager', 'dept_admin']);
 
-      // そのエリアの店舗名を取得
-      var { data: deptStores } = await client.from('stores').select('name').in('area_id', deptAreaIds);
-      var deptStoreNames = (deptStores || []).map(function(s) { return s.name; });
-      if (deptStoreNames.length === 0) { allowedMemberIds = []; return; }
-
-      // 対象店舗に所属するメンバーのIDだけ取得する（role = member に限定）
-      var { data: deptMembers } = await client.from('user_profiles').select('id').in('store', deptStoreNames).eq('role', 'member');
       allowedMemberIds = (deptMembers || []).map(function(m) { return m.id; });
     }
 
