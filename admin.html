@@ -1428,11 +1428,23 @@
       // 部署ごとに独立した新しいカテゴリを作成する（同名でも別レコード・別部署）
       for (var i = 0; i < selectedDeptIds.length; i++) {
         var deptId = selectedDeptIds[i];
+
+        // department_id も渡す（旧カラムだが NOT NULL 制約が残っている可能性があるため）
         var { data: catData, error: catError } = await client
-          .from('categories').insert({ name: name }).select().limit(1);
+          .from('categories').insert({ name: name, department_id: deptId }).select().limit(1);
         if (catError) { alert('追加エラー：' + catError.message); return; }
+
+        // catData が空の場合（RLS の SELECT 制約など）は id を別途取得する
+        var catId = (catData && catData.length > 0) ? catData[0].id : null;
+        if (!catId) {
+          var { data: fetched } = await client
+            .from('categories').select('id').eq('name', name).eq('department_id', deptId).order('id', { ascending: false }).limit(1);
+          if (!fetched || fetched.length === 0) { alert('カテゴリIDの取得に失敗しました'); return; }
+          catId = fetched[0].id;
+        }
+
         var { error: linkError } = await client
-          .from('category_departments').insert({ category_id: catData[0].id, department_id: deptId });
+          .from('category_departments').insert({ category_id: catId, department_id: deptId });
         if (linkError) { alert('部署紐づけエラー：' + linkError.message); return; }
       }
 
