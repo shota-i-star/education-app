@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>テスト — 飲食事業部 教育管理アプリ</title>
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "BIZ UDPGothic", "Hiragino Sans", sans-serif; background: #f0f4f8; color: #1a1a2e; }
+    header { background: #495e9f; color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    header .app-name { font-size: 14px; opacity: 0.85; }
+    header .user-info { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    .grade-badge { background: #bd3c40; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 20px; }
+    .btn-logout { padding: 5px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; color: #fff; font-size: 12px; cursor: pointer; font-family: "BIZ UDPGothic", sans-serif; transition: background 0.15s; }
+    .btn-logout:hover { background: rgba(255,255,255,0.25); }
+    main { max-width: 680px; margin: 0 auto; padding: 28px 16px 60px; }
+    .test-header { margin-bottom: 24px; }
+    .test-header .breadcrumb { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
+    .test-header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .test-header .meta { font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+    .pass-badge { background: #eef0fa; color: #495e9f; font-size: 12px; padding: 2px 10px; border-radius: 20px; }
+    .progress-wrap { margin-bottom: 28px; }
+    .progress-info { display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; margin-bottom: 6px; }
+    .bar-bg { background: #e5e7eb; border-radius: 99px; height: 6px; }
+    .bar-fill { background: #495e9f; border-radius: 99px; height: 6px; transition: width 0.3s; }
+    .question-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 20px; overflow: hidden; }
+    .question-head { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 10px; }
+    .q-number { font-size: 13px; font-weight: 500; color: #495e9f; }
+    .q-type { font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+    .type-choice { background: #eef0fa; color: #495e9f; }
+    .type-truefalse { background: #fef3cd; color: #856404; }
+    .type-text { background: #e8f5e9; color: #2e7d32; }
+    .question-body { padding: 20px; }
+    .question-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.6; }
+    .choices { display: flex; flex-direction: column; gap: 10px; }
+    .choice { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; border: 1.5px solid #e5e7eb; cursor: pointer; font-size: 14px; transition: border-color 0.15s, background 0.15s; }
+    .choice:hover { border-color: #495e9f; background: #f5f7ff; }
+    .choice input[type="radio"] { accent-color: #495e9f; width: 16px; height: 16px; flex-shrink: 0; }
+    .choice.correct { border-color: #2e7d32; background: #e8f5e9; }
+    .choice.wrong { border-color: #bd3c40; background: #fdf0f0; }
+    .truefalse { display: flex; gap: 12px; }
+    .tf-btn { flex: 1; padding: 14px; border-radius: 8px; border: 1.5px solid #e5e7eb; background: #fff; font-size: 22px; cursor: pointer; transition: border-color 0.15s, background 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .tf-btn span { font-size: 14px; font-weight: 500; }
+    .tf-btn.maru { color: #bd3c40; }
+    .tf-btn.batu { color: #495e9f; }
+    .tf-btn.selected-maru { border-color: #bd3c40; background: #fdf0f0; }
+    .tf-btn.selected-batu { border-color: #495e9f; background: #eef0fa; }
+    .tf-btn.correct { border-color: #2e7d32; background: #e8f5e9; }
+    .tf-btn.wrong { border-color: #bd3c40; background: #fdf0f0; }
+    .text-input { width: 100%; padding: 12px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-family: "BIZ UDPGothic", sans-serif; font-size: 14px; color: #1a1a2e; resize: vertical; min-height: 100px; transition: border-color 0.15s; outline: none; }
+    .text-input:focus { border-color: #495e9f; }
+    .text-hint { font-size: 12px; color: #9ca3af; margin-top: 6px; }
+    .text-submitted { background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; font-size: 14px; color: #6b7280; line-height: 1.7; }
+    .submitted-badge { display: inline-block; background: #e8f5e9; color: #2e7d32; font-size: 12px; padding: 2px 10px; border-radius: 20px; margin-bottom: 10px; }
+    .score-pending { font-size: 13px; color: #9ca3af; margin-top: 10px; }
+    .score-result { font-size: 13px; color: #495e9f; font-weight: 700; margin-top: 10px; }
+    .submit-area { text-align: center; margin-top: 8px; }
+    .btn-submit { padding: 14px 48px; background: #495e9f; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; font-family: "BIZ UDPGothic", sans-serif; cursor: pointer; transition: background 0.2s; }
+    .btn-submit:hover { background: #3a4d86; }
+    .btn-submit:disabled { background: #9ca3af; cursor: not-allowed; }
+    .submit-note { font-size: 12px; color: #9ca3af; margin-top: 10px; }
+    .result-card { display: none; background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 32px; text-align: center; margin-bottom: 24px; }
+    .result-card.show { display: block; }
+    .result-score { font-size: 48px; font-weight: 700; color: #495e9f; margin-bottom: 8px; }
+    .result-score span { font-size: 20px; color: #6b7280; }
+    .result-badge { display: inline-block; padding: 6px 24px; border-radius: 20px; font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+    .result-badge.passed { background: #e8f5e9; color: #2e7d32; }
+    .result-badge.failed { background: #fdf0f0; color: #bd3c40; }
+    .result-msg { font-size: 14px; color: #6b7280; line-height: 1.7; }
+    .loading { font-size: 13px; color: #9ca3af; margin-top: 8px; text-align: center; }
+    .retest-notice { background: #e8f5e9; border-radius: 8px; padding: 16px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: 700; margin-bottom: 24px; }
+    @media (max-width: 640px) {
+      header { padding: 0 14px; }
+      header .app-name { display: none; }
+      header .user-info { gap: 8px; }
+      .btn-logout { padding: 5px 10px; font-size: 11px; }
+      main { padding: 16px 12px 60px; }
+      .test-header h1 { font-size: 17px; }
+      .question-body { padding: 14px; }
+      .question-text { font-size: 14px; margin-bottom: 12px; }
+      .choice { padding: 12px 14px; font-size: 13px; }
+      .truefalse { gap: 10px; }
+      .tf-btn { padding: 18px 10px; font-size: 28px; }
+      .tf-btn span { font-size: 13px; }
+      .btn-submit { width: 100%; padding: 14px; font-size: 14px; }
+      .result-score { font-size: 40px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="app-name">飲食事業部 教育管理アプリ</span>
+    <div class="user-info">
+      <span class="grade-badge" id="grade-badge">－等級</span>
+      <span id="header-name">読み込み中...</span>
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="test-header">
+      <div class="breadcrumb">新人研修 ＞ 1等級 ＞ テスト</div>
+      <h1>新人研修 確認テスト</h1>
+      <div class="meta">
+        <span>全3問</span>
+        <span class="pass-badge">合格基準：80点以上</span>
+      </div>
+    </div>
+
+    <!-- 再試験許可通知（再試験時のみ表示） -->
+    <div class="retest-notice" id="retest-notice" style="display:none">
+      管理者から再試験が許可されました。もう一度挑戦してください！
+    </div>
+
+    <div class="result-card" id="result-card">
+      <div class="result-score" id="result-score">－<span>点</span></div>
+      <div class="result-badge" id="result-badge">－</div>
+      <div class="result-msg" id="result-msg"></div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-info"><span>回答状況</span><span id="progress-text">0 / 3 回答済み</span></div>
+      <div class="bar-bg"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
+    </div>
+
+    <div class="question-card">
+      <div class="question-head"><span class="q-number">問1</span><span class="q-type type-choice">4択</span></div>
+      <div class="question-body">
+        <div class="question-text">お客様からクレームを受けた際、最初に行うべき対応として正しいものはどれですか？</div>
+        <div class="choices" id="q1-choices">
+          <label class="choice"><input type="radio" name="q1" value="0" onchange="updateProgress()"> すぐに上司を呼ぶ</label>
+          <label class="choice"><input type="radio" name="q1" value="1" onchange="updateProgress()"> まずお客様の話をしっかり聞く</label>
+          <label class="choice"><input type="radio" name="q1" value="2" onchange="updateProgress()"> 原因を調査してから対応する</label>
+          <label class="choice"><input type="radio" name="q1" value="3" onchange="updateProgress()"> お詫びの品を用意する</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="question-card">
+      <div class="question-head"><span class="q-number">問2</span><span class="q-type type-truefalse">○×</span></div>
+      <div class="question-body">
+        <div class="question-text">電話対応では、相手が名乗る前にこちらから会社名・名前を名乗るのが基本マナーである。</div>
+        <div class="truefalse" id="q2-choices">
+          <button class="tf-btn maru" onclick="selectTF(this, 'maru')">○ <span>正しい</span></button>
+          <button class="tf-btn batu" onclick="selectTF(this, 'batu')">× <span>間違い</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="question-card">
+      <div class="question-head"><span class="q-number">問3</span><span class="q-type type-text">記述</span></div>
+      <div class="question-body">
+        <div class="question-text">接客において「ホスピタリティ」とはどういう意味か、あなたの言葉で説明してください。</div>
+        <div id="q3-input-area">
+          <textarea class="text-input" id="q3-text" placeholder="ここに回答を入力してください" oninput="updateProgress()"></textarea>
+          <div class="text-hint">※ 記述式は管理者が採点します</div>
+        </div>
+        <div id="q3-submitted-area" style="display:none">
+          <div class="submitted-badge">提出済み</div>
+          <div class="text-submitted" id="q3-submitted-text"></div>
+          <div class="score-pending" id="q3-score-area">採点待ちです。しばらくお待ちください。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="submit-area">
+      <button class="btn-submit" id="btn-submit" onclick="submitTest()">テストを提出する</button>
+      <div class="submit-note">提出後は回答を変更できません</div>
+      <div class="loading" id="loading" style="display:none">保存中...</div>
+    </div>
+  </main>
+
+  <script>
+    var SUPABASE_URL = 'https://rkclfgpewmjdluwufjng.supabase.co';
+    var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrY2xmZ3Bld21qZGx1d3Vmam5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MDIwOTcsImV4cCI6MjA5MTE3ODA5N30.ZoW7JExgrie14EEBgCOipy1QIRHCuzd8KKOS6v37nRg';
+    var client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: true }
+    });
+
+    var CURRENT_USER = null;
+    var TEST_CONFIG = {
+      category: '新人研修',
+      grade: 1,
+      pass_score: 80,
+      q1_correct: 1,
+      q2_correct: 'maru',
+      q3_question: '接客において「ホスピタリティ」とはどういう意味か、あなたの言葉で説明してください。'
+    };
+
+    var answered = { q1: false, q2: false, q3: false };
+    var q2Selected = null;
+
+    // ============================================
+    // ログイン確認
+    // ============================================
+    async function initUser() {
+      await new Promise(function(resolve) { setTimeout(resolve, 300); });
+      var { data: { session } } = await client.auth.getSession();
+      if (!session) { window.location.href = 'login.html'; return; }
+
+      var { data: profiles } = await client
+        .from('user_profiles')
+        .select('name, grade, role')
+        .eq('id', session.user.id)
+        .limit(1);
+
+      if (!profiles || profiles.length === 0) { window.location.href = 'login.html'; return; }
+
+      var profile = profiles[0];
+      CURRENT_USER = session.user.id;
+      document.getElementById('header-name').textContent = profile.name;
+      document.getElementById('grade-badge').textContent = profile.grade + '等級';
+
+      loadPastAnswer();
+    }
+
+    async function logout() {
+      await client.auth.signOut();
+      window.location.href = 'login.html';
+    }
+
+    // ============================================
+    // 再試験許可を確認する
+    // ============================================
+    async function checkRetestPermission() {
+      var { data: perms } = await client
+        .from('retest_permissions')
+        .select('id')
+        .eq('user_id', CURRENT_USER)
+        .eq('category', TEST_CONFIG.category)
+        .eq('grade', TEST_CONFIG.grade)
+        .is('used_at', null)
+        .limit(1);
+
+      if (perms && perms.length > 0) {
+        // 許可を使用済みにする
+        await client
+          .from('retest_permissions')
+          .update({ used_at: new Date().toISOString() })
+          .eq('id', perms[0].id);
+        return true;
+      }
+      return false;
+    }
+
+    // ============================================
+    // 過去の提出状況を読み込む
+    // ============================================
+    async function loadPastAnswer() {
+      var { data: textRows, error: textError } = await client
+        .from('text_answers')
+        .select('answer, score, graded_at')
+        .eq('user_id', CURRENT_USER)
+        .eq('category', TEST_CONFIG.category)
+        .eq('grade', TEST_CONFIG.grade)
+        .limit(1);
+
+      if (textError) { console.error('記述読み込みエラー:', textError.message); return; }
+      var textData = (textRows && textRows.length > 0) ? textRows[0] : null;
+
+      var { data: resultRows, error: resultError } = await client
+        .from('test_results')
+        .select('score, passed, q1_answer, q2_answer')
+        .eq('user_id', CURRENT_USER)
+        .eq('category', TEST_CONFIG.category)
+        .eq('grade', TEST_CONFIG.grade)
+        .order('taken_at', { ascending: false })
+        .limit(1);
+
+      if (resultError) { console.error('結果読み込みエラー:', resultError.message); return; }
+      var resultData = (resultRows && resultRows.length > 0) ? resultRows[0] : null;
+
+      // 提出済みの場合
+      if (textData || resultData) {
+
+        // 再試験許可があるか確認する
+        var canRetest = await checkRetestPermission();
+        if (canRetest) {
+          // 再試験許可あり → 通知を表示してそのまま受験可能にする
+          document.getElementById('retest-notice').style.display = 'block';
+          return; // 提出済み処理をスキップ
+        }
+
+        // 再試験許可なし → 提出済み状態を表示する
+        if (resultData && resultData.q1_answer !== null) {
+          var q1Val = resultData.q1_answer;
+          document.querySelectorAll('#q1-choices .choice').forEach(function(label, idx) {
+            label.querySelector('input').disabled = true;
+            if (idx === TEST_CONFIG.q1_correct) label.classList.add('correct');
+            else if (idx === q1Val && q1Val !== TEST_CONFIG.q1_correct) label.classList.add('wrong');
+            if (idx === q1Val) label.querySelector('input').checked = true;
+          });
+        }
+
+        if (resultData && resultData.q2_answer) {
+          var q2Val = resultData.q2_answer;
+          document.querySelectorAll('.tf-btn').forEach(function(btn) {
+            btn.onclick = null;
+            var type = btn.classList.contains('maru') ? 'maru' : 'batu';
+            if (type === TEST_CONFIG.q2_correct) btn.classList.add('correct');
+            else if (type === q2Val && q2Val !== TEST_CONFIG.q2_correct) btn.classList.add('wrong');
+          });
+        }
+
+        if (textData) showSubmittedState(textData.answer, textData.score, textData.graded_at);
+
+        var autoScore  = resultData ? resultData.score : 0;
+        var textScore  = (textData && textData.score !== null) ? textData.score : null;
+        var totalScore = textScore !== null ? autoScore + textScore : autoScore;
+        var passed     = totalScore >= TEST_CONFIG.pass_score;
+
+        var scoreLabel = textScore !== null ? totalScore + '点' : autoScore + '点（記述式採点待ち）';
+        document.getElementById('result-score').innerHTML = scoreLabel;
+
+        var badge = document.getElementById('result-badge');
+        var msg   = document.getElementById('result-msg');
+        if (textScore !== null) {
+          badge.textContent = passed ? '合格' : '未合格';
+          badge.className = 'result-badge ' + (passed ? 'passed' : 'failed');
+          msg.textContent = passed ? 'おめでとうございます！合格です。' : '惜しい！もう一度内容を見直してみましょう。';
+        } else {
+          badge.textContent = '採点待ち';
+          badge.className = 'result-badge';
+          badge.style.background = '#fef3cd';
+          badge.style.color = '#856404';
+          msg.textContent = '4択・○×の結果は確定しています。記述式の採点をお待ちください。';
+        }
+        document.getElementById('result-card').classList.add('show');
+        document.getElementById('btn-submit').disabled = true;
+        document.getElementById('btn-submit').textContent = '提出済み';
+      }
+    }
+
+    function showSubmittedState(answer, score, gradedAt) {
+      document.getElementById('q3-input-area').style.display = 'none';
+      document.getElementById('q3-submitted-area').style.display = 'block';
+      document.getElementById('q3-submitted-text').textContent = answer;
+      answered.q3 = true;
+      updateProgress();
+      var scoreArea = document.getElementById('q3-score-area');
+      if (score !== null && score !== undefined) {
+        scoreArea.className = 'score-result';
+        scoreArea.textContent = '採点結果：' + score + '点';
+      } else {
+        scoreArea.className = 'score-pending';
+        scoreArea.textContent = '採点待ちです。しばらくお待ちください。';
+      }
+    }
+
+    // ============================================
+    // 回答・採点処理
+    // ============================================
+    function updateProgress() {
+      answered.q1 = !!document.querySelector('input[name="q1"]:checked');
+      var q3text = document.getElementById('q3-text');
+      if (q3text) answered.q3 = q3text.value.trim().length > 0;
+      var count = Object.values(answered).filter(Boolean).length;
+      document.getElementById('progress-text').textContent = count + ' / 3 回答済み';
+      document.getElementById('progress-bar').style.width = (count / 3 * 100) + '%';
+    }
+
+    function selectTF(btn, type) {
+      document.querySelectorAll('.tf-btn').forEach(function(b) {
+        b.classList.remove('selected-maru', 'selected-batu');
+      });
+      btn.classList.add('selected-' + type);
+      q2Selected = type;
+      answered.q2 = true;
+      updateProgress();
+    }
+
+    async function submitTest() {
+      if (!answered.q1 || !answered.q2) { alert('問1と問2に回答してください。'); return; }
+      var q3text = document.getElementById('q3-text').value.trim();
+      if (!q3text) { alert('問3（記述式）を入力してください。'); return; }
+
+      document.getElementById('btn-submit').disabled = true;
+      document.getElementById('loading').style.display = 'block';
+
+      var score = 0;
+      var q1Val    = parseInt(document.querySelector('input[name="q1"]:checked').value);
+      var q1Correct = (q1Val === TEST_CONFIG.q1_correct);
+      if (q1Correct) score += 50;
+      var q2Correct = (q2Selected === TEST_CONFIG.q2_correct);
+      if (q2Correct) score += 50;
+      var passed = score >= TEST_CONFIG.pass_score;
+
+      document.querySelectorAll('#q1-choices .choice').forEach(function(label, idx) {
+        label.querySelector('input').disabled = true;
+        if (idx === TEST_CONFIG.q1_correct) label.classList.add('correct');
+        else if (idx === q1Val && !q1Correct) label.classList.add('wrong');
+      });
+      document.querySelectorAll('.tf-btn').forEach(function(btn) {
+        btn.onclick = null;
+        var type = btn.classList.contains('maru') ? 'maru' : 'batu';
+        if (type === TEST_CONFIG.q2_correct) btn.classList.add('correct');
+        else if (type === q2Selected && !q2Correct) btn.classList.add('wrong');
+        btn.classList.remove('selected-maru', 'selected-batu');
+      });
+
+      document.getElementById('result-score').innerHTML = score + '点（記述式採点待ち）';
+      var badge = document.getElementById('result-badge');
+      badge.textContent = '採点待ち';
+      badge.className = 'result-badge';
+      badge.style.background = '#fef3cd';
+      badge.style.color = '#856404';
+      document.getElementById('result-msg').textContent = '4択・○×の結果は確定しています。記述式の採点をお待ちください。';
+      document.getElementById('result-card').classList.add('show');
+
+      var { error: err1 } = await client.from('test_results').insert({
+        user_id:   CURRENT_USER,
+        category:  TEST_CONFIG.category,
+        grade:     TEST_CONFIG.grade,
+        score:     score,
+        passed:    passed,
+        q1_answer: q1Val,
+        q2_answer: q2Selected
+      });
+
+      var { error: err2 } = await client.from('text_answers').insert({
+        user_id:  CURRENT_USER,
+        category: TEST_CONFIG.category,
+        grade:    TEST_CONFIG.grade,
+        question: TEST_CONFIG.q3_question,
+        answer:   q3text
+      });
+
+      if (err1) console.error('test_results保存エラー:', err1.message);
+      if (err2) console.error('text_answers保存エラー:', err2.message);
+
+      showSubmittedState(q3text, null, null);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('btn-submit').textContent = '提出済み';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    initUser();
+  </script>
+</body>
+</html>

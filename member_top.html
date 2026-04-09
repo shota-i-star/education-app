@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>メンバートップ — 飲食事業部 教育管理アプリ</title>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "M PLUS Rounded 1c", "Hiragino Sans", "Meiryo", sans-serif; background: #f0f4f8; color: #1a1a2e; }
+
+    header { background: #495e9f; color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+    header .app-name { font-size: 14px; opacity: 0.85; }
+    header .user-info { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    .grade-badge { background: #bd3c40; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 20px; }
+    .btn-logout { padding: 5px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; color: #fff; font-size: 12px; cursor: pointer; font-family: 'M PLUS Rounded 1c', sans-serif; transition: background 0.15s; }
+    .btn-logout:hover { background: rgba(255,255,255,0.25); }
+
+    .layout { display: flex; max-width: 900px; margin: 0 auto; padding: 24px 16px; gap: 20px; }
+
+    .sidebar { width: 200px; flex-shrink: 0; }
+    .sidebar-title { font-size: 11px; font-weight: 500; color: #6b7280; margin-bottom: 8px; padding-left: 4px; }
+    .sidebar-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; }
+    .sidebar-item { display: block; width: 100%; padding: 12px 16px; background: none; border: none; border-bottom: 1px solid #f0f4f8; text-align: left; font-size: 13px; cursor: pointer; color: #6b7280; transition: background 0.15s; }
+    .sidebar-item:last-child { border-bottom: none; }
+    .sidebar-item:hover { background: #f0f4f8; }
+    .sidebar-item.active { background: #eef0fa; color: #495e9f; font-weight: 500; border-left: 3px solid #495e9f; }
+    .sidebar-tag { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
+    .tag-current { background: #495e9f; color: #fff; }
+    .tag-done { background: #e5e7eb; color: #9ca3af; }
+
+    .main-area { flex: 1; min-width: 0; }
+    .greeting { margin-bottom: 20px; }
+    .greeting h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .greeting p { font-size: 13px; color: #6b7280; }
+
+    .progress-card { background: #fff; border-radius: 12px; padding: 18px 22px; margin-bottom: 20px; border: 1px solid #e5e7eb; }
+    .progress-card .label { font-size: 12px; color: #6b7280; margin-bottom: 6px; }
+    .progress-card .rate { font-size: 26px; font-weight: 600; color: #495e9f; margin-bottom: 8px; }
+    .bar-bg { background: #e5e7eb; border-radius: 99px; height: 8px; }
+    .bar-fill { background: #495e9f; border-radius: 99px; height: 8px; transition: width 0.4s ease; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .category { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow: hidden; }
+    .category-header { padding: 14px 20px; background: #495e9f; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+    .category-header h2 { font-size: 15px; font-weight: 500; }
+    .category-header .cat-progress { font-size: 12px; opacity: 0.85; }
+
+    .item-list { padding: 4px 0; }
+    .item { padding: 14px 20px; border-bottom: 1px solid #f0f4f8; }
+    .item:last-child { border-bottom: none; }
+    .item-name { font-size: 14px; font-weight: 500; margin-bottom: 10px; color: #1a1a2e; }
+
+    /* ステップボタン */
+    .steps { display: flex; gap: 8px; flex-wrap: wrap; }
+    .step-btn {
+      padding: 6px 14px; border-radius: 20px; font-size: 12px;
+      border: 1.5px solid #e5e7eb; background: #fff; cursor: pointer;
+      font-family: 'M PLUS Rounded 1c', sans-serif; color: #6b7280;
+      transition: all 0.15s;
+    }
+    .step-btn:hover { border-color: #495e9f; background: #f5f7ff; }
+    .step-btn.checked { background: #495e9f; border-color: #495e9f; color: #fff; font-weight: 700; }
+    .step-btn.checked::before { content: "✓ "; }
+    .step-btn.locked { background: #f9fafb; color: #d1d5db; border-color: #f0f4f8; cursor: not-allowed; }
+
+    .test-btn { margin: 8px 20px 12px; display: inline-block; padding: 7px 18px; background: #bd3c40; color: #fff; font-size: 13px; border: none; border-radius: 8px; cursor: pointer; }
+    .test-score { font-size: 12px; color: #6b7280; margin: 0 20px 12px; }
+    .past-notice { background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; padding: 12px 16px; font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+    .loading-text { text-align: center; padding: 32px; color: #9ca3af; font-size: 13px; }
+
+    .save-toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 50; }
+    .save-toast.show { opacity: 1; }
+
+    /* ============================================
+       スマホ対応（640px以下）
+    ============================================ */
+    @media (max-width: 640px) {
+      /* ヘッダー：アプリ名を非表示にしてすっきりさせる */
+      header { padding: 0 14px; }
+      header .app-name { display: none; }
+      header .user-info { gap: 8px; }
+      .btn-logout { padding: 5px 10px; font-size: 11px; }
+
+      /* レイアウト：縦積みに変更 */
+      .layout { flex-direction: column; padding: 12px 12px; gap: 12px; }
+
+      /* サイドバー：横スクロールのタブ型に変換 */
+      .sidebar { width: 100%; }
+      .sidebar-title { display: none; }
+      .sidebar-card {
+        display: flex;
+        flex-direction: row;
+        overflow-x: auto;
+        border-radius: 12px;
+        scrollbar-width: none; /* Firefox */
+      }
+      .sidebar-card::-webkit-scrollbar { display: none; } /* Chrome */
+      .sidebar-item {
+        white-space: nowrap;
+        flex-shrink: 0;
+        border-bottom: none;
+        border-right: 1px solid #f0f4f8;
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+      .sidebar-item:last-child { border-right: none; }
+      .sidebar-item.active {
+        border-left: none;
+        border-bottom: 3px solid #495e9f;
+      }
+
+      /* メインエリア */
+      .greeting { margin-bottom: 14px; }
+      .greeting h1 { font-size: 17px; }
+      .greeting p { font-size: 12px; }
+
+      .progress-card { padding: 14px 16px; margin-bottom: 14px; }
+      .progress-card .rate { font-size: 22px; }
+
+      /* カテゴリカード */
+      .category-header { padding: 12px 16px; }
+      .category-header h2 { font-size: 14px; }
+      .item { padding: 12px 16px; }
+      .item-name { font-size: 13px; margin-bottom: 8px; }
+
+      /* ステップボタン：タップしやすく */
+      .steps { gap: 6px; }
+      .step-btn { padding: 9px 16px; font-size: 13px; border-radius: 20px; }
+
+      /* テストボタン */
+      .test-btn { margin: 8px 16px 12px; font-size: 13px; padding: 9px 18px; }
+      .test-score { margin: 0 16px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="app-name">飲食事業部 教育管理アプリ</span>
+    <div class="user-info">
+      <span class="grade-badge" id="grade-badge">－等級</span>
+      <span id="header-name">読み込み中...</span>
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-title">等級を切り替え</div>
+      <div class="sidebar-card" id="sidebar-grades">
+        <div class="loading-text" style="padding:16px;font-size:12px">読み込み中...</div>
+      </div>
+    </div>
+
+    <div class="main-area">
+      <div class="greeting">
+        <h1 id="greeting-name">こんにちは</h1>
+        <p id="greeting-grade">現在の等級：－</p>
+      </div>
+
+      <div class="progress-card">
+        <div class="label">全体の進捗</div>
+        <div class="rate" id="progress-rate">－</div>
+        <div class="bar-bg"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
+      </div>
+
+      <div id="panel-area">
+        <div class="loading-text">読み込み中...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="save-toast" id="toast"></div>
+
+  <script>
+    var SUPABASE_URL = 'https://rkclfgpewmjdluwufjng.supabase.co';
+    var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrY2xmZ3Bld21qZGx1d3Vmam5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MDIwOTcsImV4cCI6MjA5MTE3ODA5N30.ZoW7JExgrie14EEBgCOipy1QIRHCuzd8KKOS6v37nRg';
+    var client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: true }
+    });
+
+    var CURRENT_USER = null;
+    var CURRENT_GRADE = 0;
+    var CURRENT_VIEW_GRADE = 0; // サイドバーで選択中の等級
+
+    // ============================================
+    // ログイン確認
+    // ============================================
+    async function initUser() {
+      var { data: { session } } = await client.auth.getSession();
+      if (!session) { window.location.href = 'login.html'; return; }
+
+      var { data: profiles } = await client
+        .from('user_profiles')
+        .select('name, grade, role')
+        .eq('id', session.user.id)
+        .limit(1);
+
+      if (!profiles || profiles.length === 0) { window.location.href = 'login.html'; return; }
+
+      var profile = profiles[0];
+      CURRENT_USER = session.user.id;
+      CURRENT_GRADE = profile.grade;
+      CURRENT_VIEW_GRADE = profile.grade;
+
+      document.getElementById('header-name').textContent = profile.name;
+      document.getElementById('grade-badge').textContent = profile.grade + '等級';
+      document.getElementById('greeting-name').textContent = 'こんにちは、' + profile.name.split(' ')[0] + 'さん';
+      document.getElementById('greeting-grade').textContent = '現在の等級：' + profile.grade + '等級';
+
+      // サイドバーを描画する
+      renderSidebar(profile.grade);
+
+      // コンテンツを読み込む
+      loadContent(profile.grade);
+    }
+
+    async function logout() {
+      await client.auth.signOut();
+      window.location.href = 'login.html';
+    }
+
+    // ============================================
+    // サイドバーを描画する
+    // ============================================
+    function renderSidebar(currentGrade) {
+      var html = '';
+      for (var g = 0; g <= currentGrade; g++) {
+        var isCurrent = g === currentGrade;
+        html += '<button class="sidebar-item' + (isCurrent ? ' active' : '') + '" onclick="switchGrade(' + g + ', this)">' +
+          g + '等級' +
+          '<span class="sidebar-tag ' + (isCurrent ? 'tag-current' : 'tag-done') + '">' +
+            (isCurrent ? '現在' : '完了') +
+          '</span>' +
+        '</button>';
+      }
+      document.getElementById('sidebar-grades').innerHTML = html;
+    }
+
+    // ============================================
+    // コンテンツを読み込む
+    // ============================================
+    async function loadContent(grade) {
+      CURRENT_VIEW_GRADE = grade;
+      var isPast = grade < CURRENT_GRADE;
+      var panelArea = document.getElementById('panel-area');
+      panelArea.innerHTML = '<div class="loading-text">読み込み中...</div>';
+
+      // カテゴリ・項目・ステップを取得する
+      var { data: categories } = await client.from('categories').select('id, name').order('id');
+      var { data: items }      = await client.from('check_items').select('id, name, grade, category_id').eq('grade', grade).order('id');
+      var { data: steps }      = await client.from('check_steps').select('id, item_id, name, order_no').order('order_no');
+
+      // チェック済みステップを取得する
+      var { data: progress } = await client
+        .from('check_progress')
+        .select('step_id')
+        .eq('user_id', CURRENT_USER)
+        .not('step_id', 'is', null);
+
+      var checkedStepIds = (progress || []).map(function(p) { return p.step_id; });
+
+      if (!categories || !items || items.length === 0) {
+        panelArea.innerHTML = '<div class="loading-text">この等級のコンテンツがありません</div>';
+        return;
+      }
+
+      // 全ステップ数・チェック済みステップ数で進捗を計算する
+      // 現在の等級の項目に紐づくステップのみを対象にする
+      var currentGradeItemIds = (items || []).map(function(i) { return i.id; });
+      var allSteps = (steps || []).filter(function(s) {
+        return currentGradeItemIds.indexOf(s.item_id) !== -1;
+      });
+      var allStepIds = allSteps.map(function(s) { return s.id; });
+      var checkedCount = allStepIds.filter(function(id) {
+        return checkedStepIds.indexOf(id) !== -1;
+      }).length;
+
+      if (grade === CURRENT_GRADE) {
+        await updateProgress(grade, { length: checkedCount }, { length: allStepIds.length });
+      }
+
+      var html = '';
+      if (isPast) {
+        html += '<div class="past-notice">この内容は完了済みです。閲覧のみできます。</div>';
+      }
+
+      (categories || []).forEach(function(cat) {
+        var catItems = (items || []).filter(function(i) { return i.category_id === cat.id; });
+        if (catItems.length === 0) return;
+
+        var catSteps = (steps || []).filter(function(s) {
+          return catItems.some(function(i) { return i.id === s.item_id; });
+        });
+        var catChecked = catSteps.filter(function(s) { return checkedStepIds.indexOf(s.id) !== -1; }).length;
+
+        html += '<div class="category">' +
+          '<div class="category-header">' +
+            '<h2>' + cat.name + '</h2>' +
+            '<span class="cat-progress">' + catChecked + ' / ' + catSteps.length + ' 完了</span>' +
+          '</div>' +
+          '<div class="item-list">';
+
+        catItems.forEach(function(item) {
+          var itemSteps = (steps || []).filter(function(s) { return s.item_id === item.id; });
+
+          var stepsHtml = itemSteps.map(function(step, idx) {
+            var isChecked = checkedStepIds.indexOf(step.id) !== -1;
+            // 前のステップがチェック済みかどうか確認する
+            var prevChecked = idx === 0 || checkedStepIds.indexOf(itemSteps[idx-1].id) !== -1;
+            var isLocked = isPast ? false : (!isChecked && !prevChecked);
+
+            var cls = 'step-btn';
+            if (isChecked) cls += ' checked';
+            else if (isLocked) cls += ' locked';
+
+            var onclick = (!isPast && !isLocked)
+              ? 'onclick="toggleStep(\'' + step.id + '\', ' + isChecked + ', this)"'
+              : '';
+
+            return '<button class="' + cls + '" ' + onclick + ' ' + (isLocked || isPast ? 'disabled' : '') + '>' +
+              step.name +
+            '</button>';
+          }).join('');
+
+          html += '<div class="item">' +
+            '<div class="item-name">' + item.name + '</div>' +
+            '<div class="steps">' + stepsHtml + '</div>' +
+          '</div>';
+        });
+
+        html += '</div>';
+
+        if (!isPast) {
+          html += '<button class="test-btn" onclick="window.location.href=\'test_page.html\'">テストを受ける</button>';
+        }
+
+        html += '</div>';
+      });
+
+      panelArea.innerHTML = html;
+    }
+
+    // ============================================
+    // ステップのチェックを切り替える
+    // ============================================
+    async function toggleStep(stepId, isChecked, btn) {
+      if (isChecked) {
+        // チェックを外す
+        var { error } = await client
+          .from('check_progress')
+          .delete()
+          .eq('user_id', CURRENT_USER)
+          .eq('step_id', stepId);
+        if (error) { console.error('削除エラー:', error.message); return; }
+      } else {
+        // チェックを入れる
+        var { error } = await client
+          .from('check_progress')
+          .insert({ user_id: CURRENT_USER, step_id: stepId, item_id: null, checked: true });
+        if (error) { console.error('保存エラー:', error.message); return; }
+      }
+
+      // ★修正①：チェック時は固定メッセージを渡す
+      showToast('保存しました ✓');
+      loadContent(CURRENT_VIEW_GRADE); // 画面を再描画する
+    }
+
+    // ============================================
+    // 等級を切り替える
+    // ============================================
+    function switchGrade(grade, btn) {
+      document.querySelectorAll('.sidebar-item').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      loadContent(grade);
+    }
+
+    // ============================================
+    // 進捗率を更新して100%なら等級アップ申請する
+    // ============================================
+    async function updateProgress(grade, checkedStepIds, allStepIds) {
+      var rate = allStepIds.length > 0
+        ? Math.round(checkedStepIds.length / allStepIds.length * 100)
+        : 0;
+
+      document.getElementById('progress-rate').textContent = rate + '%';
+      document.getElementById('progress-bar').style.width = rate + '%';
+
+      // 100%になったら等級アップ申請を送る
+      if (rate === 100 && grade === CURRENT_GRADE) {
+        await requestGradeUp();
+      }
+    }
+
+    // 等級アップ申請を送る
+    async function requestGradeUp() {
+      console.log('requestGradeUp が呼ばれました');
+      console.log('CURRENT_USER:', CURRENT_USER);
+      console.log('CURRENT_GRADE:', CURRENT_GRADE);
+
+      // すでに申請済みか確認する
+      var { data: existing } = await client
+        .from('grade_up_requests')
+        .select('id')
+        .eq('member_id', CURRENT_USER)
+        .eq('current_grade', CURRENT_GRADE)
+        .eq('status', 'pending')
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        // すでに申請済みの場合もメッセージを表示する
+        showToast('昇級申請は送付済みです 📬');
+        return;
+      }
+
+      // メンバー名を取得する
+      var { data: profiles } = await client
+        .from('user_profiles')
+        .select('name')
+        .eq('id', CURRENT_USER)
+        .limit(1);
+
+      var name = profiles && profiles.length > 0 ? profiles[0].name : '不明';
+
+      var { error } = await client
+        .from('grade_up_requests')
+        .insert({
+          member_id:     CURRENT_USER,
+          member_name:   name,
+          current_grade: CURRENT_GRADE,
+          status:        'pending'
+        });
+
+      if (!error) {
+        // ★修正②：昇級申請成功時のメッセージを渡す
+        showToast('進捗100%達成！上司に昇級申請を送りました 🎉');
+      }
+    }
+
+    // ============================================
+    // トーストを表示する
+    // ============================================
+    // ★修正③：引数 msg を受け取り、テキストをセットしてから表示する
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(function() { t.classList.remove('show'); }, 2000);
+    }
+
+    initUser();
+  </script>
+</body>
+</html>

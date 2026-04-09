@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ログイン — 飲食事業部 教育管理アプリ</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Hiragino Sans", "Meiryo", sans-serif;
+      background-color: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    }
+    .app-title {
+      font-size: 13px;
+      color: #6b7280;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      color: #1a1a2e;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+      color: #1a1a2e;
+      margin-bottom: 20px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: #495e9f; }
+    .btn-login {
+      width: 100%;
+      padding: 12px;
+      background-color: #495e9f;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .btn-login:hover { background-color: #3a4d86; }
+    .btn-login:disabled { background-color: #9ca3af; cursor: not-allowed; }
+    .note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #9ca3af;
+      text-align: center;
+    }
+    /* エラーメッセージ */
+    .error-msg {
+      display: none;
+      background: #fdf0f0;
+      border: 1px solid #bd3c40;
+      color: #bd3c40;
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .error-msg.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <p class="app-title">飲食事業部 教育管理アプリ</p>
+    <h1>ログイン</h1>
+
+    <!-- エラーメッセージ -->
+    <div class="error-msg" id="error-msg">
+      社員番号またはパスワードが正しくありません
+    </div>
+
+    <label for="employee-id">社員番号</label>
+    <input type="text" id="employee-id" placeholder="例：10001">
+
+    <label for="password">パスワード</label>
+    <input type="password" id="password" placeholder="パスワードを入力">
+
+    <button class="btn-login" id="btn-login" onclick="login()">ログイン</button>
+    <p class="note">アカウントについては管理者にお問い合わせください</p>
+  </div>
+
+  <script>
+    // ============================================
+    // Supabase接続設定
+    // ============================================
+    var SUPABASE_URL = 'https://rkclfgpewmjdluwufjng.supabase.co';
+    var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrY2xmZ3Bld21qZGx1d3Vmam5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MDIwOTcsImV4cCI6MjA5MTE3ODA5N30.ZoW7JExgrie14EEBgCOipy1QIRHCuzd8KKOS6v37nRg';
+    var client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: true }  // ログイン状態を保持する
+    });
+
+    async function login() {
+      var employeeId = document.getElementById('employee-id').value.trim();
+      var password   = document.getElementById('password').value;
+
+      if (!employeeId || !password) {
+        showError();
+        return;
+      }
+
+      // ボタンを無効化
+      document.getElementById('btn-login').disabled = true;
+      document.getElementById('btn-login').textContent = 'ログイン中...';
+      document.getElementById('error-msg').classList.remove('show');
+
+      // ① 社員番号からメールアドレスを取得する
+      // （Supabaseはメールアドレスでログインするため変換が必要）
+      var { data: profile, error: profileError } = await client
+        .from('user_profiles')
+        .select('id, role, name')
+        .eq('employee_id', employeeId)
+        .limit(1);
+
+      if (profileError || !profile || profile.length === 0) {
+        showError();
+        return;
+      }
+
+      // ② 社員番号からメールアドレスを組み立てる
+      // user_profilesテーブルのidでSupabase Authのメールを引く
+      var emailMap = {
+        '10001': 'yamada@education-app.com',
+        '00001': 'suzuki@education-app.com',
+        '1':     'suzuki@education-app.com' // 先頭0が消えた場合の保険
+      };
+      var email = emailMap[employeeId] || (employeeId + '@education-app.com');
+
+      // ③ Supabaseにログインする
+      var { data, error } = await client.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (error) {
+        showError();
+        return;
+      }
+
+      // ④ 役割に応じて画面を切り替える
+      var role = profile[0].role;
+      if (role === 'member') {
+        window.location.href = 'member_top.html';
+      } else if (role === 'manager') {
+        window.location.href = 'manager_dashboard.html';
+      } else if (role === 'admin') {
+        window.location.href = 'admin.html';
+      } else if (role === 'manager_admin') {
+        window.location.href = 'manager_dashboard.html';
+      } else if (role === 'dept_admin') {
+        window.location.href = 'manager_dashboard.html';
+      }
+    }
+
+    function showError() {
+      document.getElementById('error-msg').classList.add('show');
+      document.getElementById('btn-login').disabled = false;
+      document.getElementById('btn-login').textContent = 'ログイン';
+    }
+  </script>
+</body>
+</html>

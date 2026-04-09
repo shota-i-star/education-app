@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理画面 — 飲食事業部 教育管理アプリ</title>
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "BIZ UDPGothic", "Hiragino Sans", sans-serif; background: #f0f4f8; color: #1a1a2e; font-size: 14px; display: flex; flex-direction: column; min-height: 100vh; }
+    header { background: #495e9f; color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    header .app-name { font-size: 14px; opacity: 0.85; }
+    header .user-info { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    .role-badge { background: #bd3c40; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 20px; }
+    .btn-logout { padding: 5px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; color: #fff; font-size: 12px; cursor: pointer; font-family: "BIZ UDPGothic", sans-serif; transition: background 0.15s; }
+    .btn-logout:hover { background: rgba(255,255,255,0.25); }
+    .layout { display: flex; flex: 1; }
+    .sidenav { width: 200px; background: #fff; border-right: 1px solid #e5e7eb; flex-shrink: 0; padding: 16px 0; }
+    .sidenav-section { margin-bottom: 8px; }
+    .sidenav-label { font-size: 11px; font-weight: 700; color: #9ca3af; padding: 8px 20px 4px; letter-spacing: 0.05em; }
+    .back-link { display: block; padding: 12px 20px; font-size: 13px; color: #495e9f; text-decoration: none; border-bottom: 1px solid #f0f4f8; }
+    .back-link:hover { background: #f0f4f8; }
+    .sidenav-item { display: block; width: 100%; padding: 10px 20px; background: none; border: none; text-align: left; font-family: "BIZ UDPGothic", sans-serif; font-size: 13px; color: #374151; cursor: pointer; transition: background 0.15s; border-left: 3px solid transparent; }
+    .sidenav-item:hover { background: #f0f4f8; }
+    .sidenav-item.active { background: #eef0fa; color: #495e9f; font-weight: 700; border-left-color: #495e9f; }
+    .main { flex: 1; padding: 24px; max-width: 860px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .page-desc { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+    .card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow: hidden; }
+    .card-header { padding: 14px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+    .card-header h3 { font-size: 14px; font-weight: 700; }
+    .card-body { padding: 16px 20px; }
+    .btn { padding: 7px 16px; border-radius: 8px; font-size: 13px; font-family: "BIZ UDPGothic", sans-serif; cursor: pointer; border: none; transition: background 0.15s; }
+    .btn-primary { background: #495e9f; color: #fff; }
+    .btn-primary:hover { background: #3a4d86; }
+    .btn-danger { background: none; border: 1px solid #e5e7eb; color: #bd3c40; }
+    .btn-danger:hover { background: #fdf0f0; border-color: #bd3c40; }
+    .btn-secondary { background: none; border: 1px solid #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #f0f4f8; }
+    .btn-sm { padding: 4px 12px; font-size: 12px; }
+    .form-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .form-row:last-child { margin-bottom: 0; }
+    input[type="text"], input[type="number"], input[type="password"], select {
+      padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px;
+      font-family: "BIZ UDPGothic", sans-serif; font-size: 13px; color: #1a1a2e; outline: none; background: #fff;
+    }
+    input[type="text"]:focus, input[type="password"]:focus, select:focus { border-color: #495e9f; }
+    input[type="text"], input[type="password"] { flex: 1; }
+    input[type="number"] { width: 80px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-weight: 700; white-space: nowrap; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f4f8; vertical-align: middle; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f9fafb; }
+    .td-actions { display: flex; gap: 6px; }
+    /* メンバー一覧テーブル：横スクロール対応 */
+    #member-list { overflow-x: auto; }
+    #member-list table { min-width: 700px; }
+    #member-list select.btn-sm { max-width: 130px; width: auto; }
+    #member-list td:first-child { white-space: nowrap; font-weight: 500; }
+    #member-list td:nth-child(2) { color: #6b7280; }
+    .pill { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; }
+    .pill-blue { background: #eef0fa; color: #495e9f; }
+    .pill-gray { background: #f0f4f8; color: #6b7280; }
+    .pill-red { background: #fdf0f0; color: #bd3c40; }
+    .step-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .step-tag { display: flex; align-items: center; gap: 4px; padding: 3px 10px; background: #eef0fa; color: #495e9f; border-radius: 20px; font-size: 12px; }
+    .step-tag button { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
+    .step-tag button:hover { color: #bd3c40; }
+    hr { border: none; border-top: 1px solid #f0f4f8; margin: 16px 0; }
+    .loading-text { text-align: center; padding: 32px; color: #9ca3af; font-size: 13px; }
+    .pill-yellow { background: #fef3cd; color: #856404; }
+    .pill-green { background: #e8f5e9; color: #2e7d32; }
+
+    /* トグルセクション */
+    .toggle-arrow { display: inline-block; transition: transform 0.2s; font-style: normal; }
+    .toggle-arrow.closed { transform: rotate(-90deg); }
+    .dept-card-header.toggle-btn, .toggle-grade-header { cursor: pointer; }
+    .dept-card-header.toggle-btn:hover { opacity: 0.9; }
+    .toggle-grade-header { background: #f0f4f8; border-radius: 8px; padding: 8px 14px; margin-bottom: 10px; font-size: 13px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 6px; user-select: none; }
+    .toggle-grade-header:hover { background: #e5eaf0; }
+
+    /* 部署カード用スタイル */
+    .dept-card { background: #fff; border-radius: 12px; border: 2px solid #495e9f; margin-bottom: 20px; overflow: hidden; }
+    .dept-card-header { padding: 14px 20px; background: #495e9f; color: #fff; display: flex; align-items: center; justify-content: space-between; }
+    .dept-card-header h3 { font-size: 15px; font-weight: 700; }
+    .dept-card-body { padding: 16px 20px; }
+    .area-card { background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 12px; overflow: hidden; }
+    .area-card-header { padding: 10px 16px; background: #f0f4f8; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+    .area-card-header h4 { font-size: 13px; font-weight: 700; color: #374151; }
+    .area-card-body { padding: 12px 16px; }
+
+    /* モーダル */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 12px; padding: 28px; width: 100%; max-width: 480px; }
+    .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; }
+    .modal-field input, .modal-field select { width: 100%; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+    /* トースト */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="app-name">飲食事業部 教育管理アプリ</span>
+    <div class="user-info">
+      <span class="role-badge">管理者</span>
+      <span id="header-name">読み込み中...</span>
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidenav">
+      <a href="manager_dashboard.html" class="back-link">← ダッシュボードへ戻る</a>
+      <div class="sidenav-section">
+        <div class="sidenav-label">コンテンツ</div>
+        <button class="sidenav-item" onclick="switchPage('content', this)">カテゴリ・項目管理</button>
+        <button class="sidenav-item" onclick="switchPage('test', this)">テスト管理</button>
+      </div>
+      <div class="sidenav-section">
+        <div class="sidenav-label">採点</div>
+        <button class="sidenav-item" onclick="switchPage('grading', this)">記述式採点</button>
+        <button class="sidenav-item" onclick="switchPage('retest', this)">再試験管理</button>
+      </div>
+      <div class="sidenav-section">
+        <div class="sidenav-label">組織</div>
+        <button class="sidenav-item" onclick="switchPage('org', this)">部署・エリア・店舗管理</button>
+        <button class="sidenav-item active" onclick="switchPage('member', this)">メンバー管理</button>
+      </div>
+    </nav>
+
+    <div class="main">
+
+      <!-- メンバー管理ページ -->
+      <div class="page active" id="page-member">
+        <h2>メンバー管理</h2>
+        <p class="page-desc">メンバーのアカウント・等級・役割を管理します。</p>
+        <div class="card">
+          <div class="card-header">
+            <h3>メンバー一覧</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-sm" style="background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9" onclick="exportMembersCSV()">📥 CSVエクスポート</button>
+              <button class="btn btn-primary btn-sm" onclick="openAddModal()">＋ メンバーを追加</button>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div id="member-list"><div class="loading-text">読み込み中...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 記述式採点ページ -->
+      <div class="page" id="page-grading">
+        <h2>記述式採点</h2>
+        <p class="page-desc">メンバーが提出した記述式回答を確認し、点数を入力してください。</p>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-body">
+            <div class="form-row">
+              <label style="font-size:13px;color:#374151;white-space:nowrap">表示：</label>
+              <select id="filter-graded" onchange="loadAnswers()">
+                <option value="ungraded">未採点のみ</option>
+                <option value="all">すべて</option>
+                <option value="graded">採点済みのみ</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div id="grading-list"><div class="loading-text">読み込み中...</div></div>
+      </div>
+
+      <!-- 再試験管理ページ -->
+      <div class="page" id="page-retest">
+        <h2>再試験管理</h2>
+        <p class="page-desc">不合格メンバーに再試験を許可します。</p>
+        <div id="retest-list"><div class="loading-text">読み込み中...</div></div>
+      </div>
+
+      <!-- カテゴリ・項目管理 -->
+      <div class="page" id="page-content">
+        <h2>カテゴリ・項目管理</h2>
+        <p class="page-desc">教育カテゴリと各項目を設定します。</p>
+        <div id="content-list"><div class="loading-text">読み込み中...</div></div>
+        <button class="btn btn-primary" style="margin-top:4px" onclick="openAddCategoryModal()">＋ 新しいカテゴリを追加</button>
+      </div>
+
+      <!-- テスト管理 -->
+      <div class="page" id="page-test">
+        <h2>テスト管理</h2>
+        <p class="page-desc">カテゴリ・等級ごとに問題集と問題を管理します。</p>
+        <div id="test-list"><div class="loading-text">読み込み中...</div></div>
+      </div>
+
+      <!-- 部署・エリア・店舗管理 -->
+      <div class="page" id="page-org">
+        <h2>部署・エリア・店舗管理</h2>
+        <p class="page-desc">部署・エリア・所属店舗を設定します。</p>
+        <div id="org-list"><div class="loading-text">読み込み中...</div></div>
+        <button class="btn btn-primary" id="btn-add-dept" style="margin-top:4px" onclick="openAddDeptModal()">＋ 新しい部署を追加</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 問題集追加モーダル -->
+  <div class="modal-overlay" id="add-testset-modal">
+    <div class="modal">
+      <h3>問題集を追加</h3>
+      <div class="modal-field">
+        <label>問題集名</label>
+        <input type="text" id="add-testset-name" placeholder="例：新人研修 2等級 テスト">
+      </div>
+      <div class="modal-field">
+        <label>カテゴリ</label>
+        <select id="add-testset-category"></select>
+      </div>
+      <div class="modal-field">
+        <label>対象等級</label>
+        <select id="add-testset-grade">
+          <option value="0">0等級</option>
+          <option value="1" selected>1等級</option>
+          <option value="2">2等級</option>
+          <option value="3">3等級</option>
+          <option value="4">4等級</option>
+          <option value="5">5等級</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>合格基準点</label>
+        <input type="number" id="add-testset-pass" value="80" style="width:80px"> <span style="font-size:13px;color:#6b7280">点以上</span>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('add-testset-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="addTestSet()">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 問題追加モーダル -->
+  <div class="modal-overlay" id="add-question-modal">
+    <div class="modal">
+      <h3>問題を追加</h3>
+      <div class="modal-field">
+        <label>問題文</label>
+        <input type="text" id="add-question-text" placeholder="問題文を入力してください">
+      </div>
+      <div class="modal-field">
+        <label>形式</label>
+        <select id="add-question-type" onchange="toggleChoices()">
+          <option value="choice">4択</option>
+          <option value="truefalse">○×</option>
+          <option value="text">記述</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>配点</label>
+        <input type="number" id="add-question-point" value="10" style="width:80px"> <span style="font-size:13px;color:#6b7280">点</span>
+      </div>
+      <div id="choices-area" class="modal-field">
+        <label>選択肢（正解に✓をつける）</label>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="form-row" style="align-items:center">
+            <input type="checkbox" id="c1-correct" style="width:16px;height:16px;flex-shrink:0">
+            <input type="text" id="c1-text" placeholder="選択肢1">
+          </div>
+          <div class="form-row" style="align-items:center">
+            <input type="checkbox" id="c2-correct" style="width:16px;height:16px;flex-shrink:0">
+            <input type="text" id="c2-text" placeholder="選択肢2">
+          </div>
+          <div class="form-row" style="align-items:center">
+            <input type="checkbox" id="c3-correct" style="width:16px;height:16px;flex-shrink:0">
+            <input type="text" id="c3-text" placeholder="選択肢3">
+          </div>
+          <div class="form-row" style="align-items:center">
+            <input type="checkbox" id="c4-correct" style="width:16px;height:16px;flex-shrink:0">
+            <input type="text" id="c4-text" placeholder="選択肢4">
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('add-question-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="addQuestion()">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- カテゴリ追加モーダル -->
+  <div class="modal-overlay" id="add-category-modal">
+    <div class="modal">
+      <h3>カテゴリを追加</h3>
+      <!-- dept_admin は自部署に自動設定されるため非表示 -->
+      <div class="modal-field" id="add-category-dept-field">
+        <label>部署（複数選択可）</label>
+        <div id="add-category-dept-checks" style="display:flex;flex-direction:column;gap:8px;margin-top:6px"></div>
+      </div>
+      <div class="modal-field">
+        <label>カテゴリ名</label>
+        <input type="text" id="add-category-name" placeholder="例：店舗運営基礎">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('add-category-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="addCategory()">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ステップ追加モーダル -->
+  <div class="modal-overlay" id="add-step-modal">
+    <div class="modal">
+      <h3>ステップを追加</h3>
+      <div class="modal-field">
+        <label>ステップ名</label>
+        <input type="text" id="add-step-name" placeholder="例：教えられる">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('add-step-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="addStep()">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 項目追加モーダル（ステップ同時追加対応） -->
+  <div class="modal-overlay" id="add-item-modal">
+    <div class="modal" style="max-width:520px">
+      <h3>項目を追加</h3>
+      <div class="modal-field">
+        <label>項目名</label>
+        <input type="text" id="add-item-name" placeholder="例：レジ操作の基本">
+      </div>
+      <div class="modal-field">
+        <label>対象等級</label>
+        <select id="add-item-grade">
+          <option value="0">0等級</option>
+          <option value="1" selected>1等級</option>
+          <option value="2">2等級</option>
+          <option value="3">3等級</option>
+          <option value="4">4等級</option>
+          <option value="5">5等級</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>ステップ（任意・複数追加可）</label>
+        <div id="pending-steps-list" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;min-height:24px">
+          <span style="font-size:12px;color:#9ca3af">ステップなし</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="new-step-name" placeholder="例：教えられる" onkeydown="if(event.key==='Enter'){addPendingStep();event.preventDefault();}">
+          <button type="button" class="btn btn-secondary" style="white-space:nowrap;padding:7px 12px" onclick="addPendingStep()">＋ 追加</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('add-item-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="addItem()">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- カテゴリ複製モーダル（admin / manager_admin のみ使用） -->
+  <div class="modal-overlay" id="duplicate-category-modal">
+    <div class="modal">
+      <h3>カテゴリを複製</h3>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:16px">「<strong id="duplicate-category-name"></strong>」のカテゴリ・項目・ステップを選んだ部署にコピーします。</p>
+      <div class="modal-field">
+        <label>複製先の部署</label>
+        <select id="duplicate-category-dept" style="width:100%"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('duplicate-category-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="duplicateCategory()">複製する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 部署追加モーダル -->
+  <div class="modal-overlay" id="add-dept-modal">
+    <div class="modal">
+      <h3>部署を追加</h3>
+      <div class="modal-field">
+        <label>部署名</label>
+        <input type="text" id="add-dept-name" placeholder="例：営業部">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('add-dept-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="addDept()">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- エリア追加モーダル -->
+  <div class="modal-overlay" id="add-area-modal">
+    <div class="modal">
+      <h3>エリアを追加</h3>
+      <div class="modal-field">
+        <label>エリア名</label>
+        <input type="text" id="add-area-name" placeholder="例：名古屋エリア">
+      </div>
+      <div class="modal-field">
+        <label>所属部署</label>
+        <select id="add-area-dept"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('add-area-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="addArea()">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 店舗追加モーダル -->
+  <div class="modal-overlay" id="add-store-modal">
+    <div class="modal">
+      <h3>店舗を追加</h3>
+      <div class="modal-field">
+        <label>店舗名</label>
+        <input type="text" id="add-store-name" placeholder="例：池袋店">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('add-store-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="addStore()">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 店舗移動モーダル -->
+  <div class="modal-overlay" id="move-store-modal">
+    <div class="modal">
+      <h3>店舗を移動</h3>
+      <div class="modal-field">
+        <label>店舗名</label>
+        <div id="move-store-label" style="font-size:14px;font-weight:700;color:#1a1a2e;padding:6px 0"></div>
+      </div>
+      <div class="modal-field">
+        <label>移動先エリア</label>
+        <select id="move-store-area" style="width:100%"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('move-store-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="moveStore()">移動する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ★変更：メンバー追加モーダル（役割に dept_admin 追加・部署選択欄追加） -->
+  <div class="modal-overlay" id="add-modal">
+    <div class="modal">
+      <h3>メンバーを追加</h3>
+      <div class="modal-field">
+        <label>名前</label>
+        <input type="text" id="add-name" placeholder="例：山田 太郎">
+      </div>
+      <div class="modal-field">
+        <label>社員番号</label>
+        <input type="text" id="add-employee-id" placeholder="例：10007">
+      </div>
+      <div class="modal-field">
+        <label>パスワード</label>
+        <input type="password" id="add-password" placeholder="初期パスワードを設定">
+      </div>
+      <div class="modal-field">
+        <label>役割</label>
+        <!-- ★変更：dept_admin を追加・onchange で部署欄を表示切替 -->
+        <select id="add-role" onchange="toggleDeptField()">
+          <option value="member">メンバー</option>
+          <option value="manager">上司</option>
+          <option value="admin">管理者</option>
+          <option value="manager_admin">全権管理者</option>
+          <option value="dept_admin">部署管理者</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>等級</label>
+        <select id="add-grade">
+          <option value="0">0等級</option>
+          <option value="1">1等級</option>
+          <option value="2">2等級</option>
+          <option value="3">3等級</option>
+          <option value="4">4等級</option>
+          <option value="5">5等級</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>店舗</label>
+        <input type="text" id="add-store" placeholder="例：渋谷店">
+      </div>
+      <div class="modal-field">
+        <label>エリア</label>
+        <input type="text" id="add-area" placeholder="例：東京エリア">
+      </div>
+      <!-- ★追加：部署管理者のときだけ表示する部署選択欄 -->
+      <div class="modal-field" id="dept-field" style="display:none">
+        <label>所属部署（部署管理者の場合のみ）</label>
+        <select id="add-dept-id"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeAddModal()">キャンセル</button>
+        <button class="btn btn-primary" onclick="addMember()">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ============================================
+    // Supabase接続設定
+    // ============================================
+    var SUPABASE_URL = 'https://rkclfgpewmjdluwufjng.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrY2xmZ3Bld21qZGx1d3Vmam5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MDIwOTcsImV4cCI6MjA5MTE3ODA5N30.ZoW7JExgrie14EEBgCOipy1QIRHCuzd8KKOS6v37nRg';
+    var SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrY2xmZ3Bld21qZGx1d3Vmam5nIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTYwMjA5NywiZXhwIjoyMDkxMTc4MDk3fQ.GHaygpQO9oiQhNL6qmqt_9DCAn22vNzcUVosme9OzpI';
+
+    var client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true }
+    });
+    var adminClient = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+      auth: { persistSession: false }
+    });
+
+    // ============================================
+    // dept_admin フィルタ用グローバル変数
+    // ============================================
+    var currentRole = null;      // ログインユーザーの役割
+    var currentDeptId = null;    // dept_admin の department_id
+    var allowedMemberIds = null; // null = 全員 / 配列 = 自部署メンバーのみ
+
+    // dept_admin の場合に「自部署のメンバーID」を事前に取得して allowedMemberIds に格納する
+    async function initDeptFilter() {
+      if (currentRole !== 'dept_admin' || !currentDeptId) return;
+
+      // 自部署のエリアIDを取得
+      var { data: deptAreas } = await client.from('areas').select('id').eq('department_id', currentDeptId);
+      var deptAreaIds = (deptAreas || []).map(function(a) { return a.id; });
+      if (deptAreaIds.length === 0) { allowedMemberIds = []; return; }
+
+      // そのエリアの店舗名を取得
+      var { data: deptStores } = await client.from('stores').select('name').in('area_id', deptAreaIds);
+      var deptStoreNames = (deptStores || []).map(function(s) { return s.name; });
+      if (deptStoreNames.length === 0) { allowedMemberIds = []; return; }
+
+      // 対象店舗に所属するメンバーのIDだけ取得する（role = member に限定）
+      var { data: deptMembers } = await client.from('user_profiles').select('id').in('store', deptStoreNames).eq('role', 'member');
+      allowedMemberIds = (deptMembers || []).map(function(m) { return m.id; });
+    }
+
+    // ============================================
+    // ログイン確認
+    // ============================================
+    async function initUser() {
+      var { data: { session } } = await client.auth.getSession();
+      if (!session) { window.location.href = 'login.html'; return; }
+
+      // department_id も取得する（dept_admin のフィルタに使う）
+      var { data: profiles } = await client
+        .from('user_profiles')
+        .select('name, role, department_id')
+        .eq('id', session.user.id)
+        .limit(1);
+
+      if (!profiles || profiles.length === 0) { window.location.href = 'login.html'; return; }
+      var profile = profiles[0];
+
+      currentRole   = profile.role;
+      currentDeptId = profile.department_id;
+
+      // admin・manager_admin・dept_admin のみ許可（それ以外はトップへ）
+      if (profile.role !== 'admin' && profile.role !== 'manager_admin' && profile.role !== 'dept_admin') {
+        window.location.href = 'member_top.html';
+        return;
+      }
+
+      document.getElementById('header-name').textContent = profile.name;
+      // ヘッダーのバッジを役割に合わせて更新する
+      var roleLabels = { admin: '管理者', manager_admin: '全権管理者', dept_admin: '部署管理者' };
+      document.querySelector('.role-badge').textContent = roleLabels[profile.role] || '管理者';
+
+      await initDeptFilter(); // dept_admin の場合: allowedMemberIds を先に確定させる
+
+      // dept_admin には「新しい部署を追加」ボタンを非表示にする（他部署の追加は不可）
+      if (currentRole === 'dept_admin') {
+        var btnAddDept = document.getElementById('btn-add-dept');
+        if (btnAddDept) btnAddDept.style.display = 'none';
+      }
+
+      loadMembers();
+    }
+
+    async function logout() {
+      await client.auth.signOut();
+      window.location.href = 'login.html';
+    }
+
+    // ============================================
+    // メンバー一覧を読み込む
+    // ============================================
+    async function loadMembers() {
+      var membersQuery = client
+        .from('user_profiles')
+        .select('id, employee_id, name, role, grade, store, area, department_id')
+        .order('employee_id');
+
+      // dept_admin の場合は自部署のメンバーのみ表示する
+      if (currentRole === 'dept_admin' && allowedMemberIds !== null) {
+        if (allowedMemberIds.length === 0) {
+          document.getElementById('member-list').innerHTML = '<div class="loading-text">表示対象のメンバーがいません</div>';
+          return;
+        }
+        membersQuery = membersQuery.in('id', allowedMemberIds);
+      }
+
+      var { data: members, error } = await membersQuery;
+
+      var { data: stores }  = await client.from('stores').select('id, name, area_id');
+      var { data: areas }   = await client.from('areas').select('id, name');
+      var { data: depts }   = await client.from('departments').select('id, name').order('id');
+
+      if (error) { console.error('メンバー取得エラー:', error.message); return; }
+
+      if (!members || members.length === 0) {
+        document.getElementById('member-list').innerHTML = '<div class="loading-text">メンバーが登録されていません</div>';
+        return;
+      }
+
+      var roleLabels = {
+        member:        'メンバー',
+        manager:       '上司',
+        admin:         '管理者',
+        manager_admin: '全権管理者',
+        dept_admin:    '部署管理者'
+      };
+
+      var rows = members.map(function(m) {
+        // 部署プルダウン
+        var deptOpts = '<option value="">未設定</option>' +
+          (depts || []).map(function(d) {
+            return '<option value="' + d.id + '"' + (m.department_id === d.id ? ' selected' : '') + '>' + d.name + '</option>';
+          }).join('');
+
+        // 店舗プルダウン（エリアでグルーピング）
+        var storeOpts = '<option value="">未設定</option>' +
+          (areas || []).map(function(area) {
+            var areaStores = (stores || []).filter(function(s) { return s.area_id === area.id; });
+            if (areaStores.length === 0) return '';
+            return '<optgroup label="' + area.name + '">' +
+              areaStores.map(function(s) {
+                return '<option value="' + s.name + '"' + (m.store === s.name ? ' selected' : '') + '>' + s.name + '</option>';
+              }).join('') +
+            '</optgroup>';
+          }).join('');
+
+        return '<tr>' +
+          '<td>' + m.name + '</td>' +
+          '<td>' + m.employee_id + '</td>' +
+          '<td>' +
+            '<select class="btn-sm" onchange="updateDept(\'' + m.id + '\', this.value)">' + deptOpts + '</select>' +
+          '</td>' +
+          '<td>' +
+            '<select class="btn-sm" onchange="updateStore(\'' + m.id + '\', this.value)">' + storeOpts + '</select>' +
+          '</td>' +
+          '<td>' +
+            '<select class="btn-sm" onchange="updateGrade(\'' + m.id + '\', this.value)">' +
+              [0,1,2,3,4,5].map(function(g) {
+                return '<option value="' + g + '"' + (m.grade === g ? ' selected' : '') + '>' + g + '等級</option>';
+              }).join('') +
+            '</select>' +
+          '</td>' +
+          '<td>' +
+            '<select class="btn-sm" onchange="updateRole(\'' + m.id + '\', this.value)">' +
+              Object.keys(roleLabels).map(function(r) {
+                return '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + roleLabels[r] + '</option>';
+              }).join('') +
+            '</select>' +
+          '</td>' +
+          '<td><button class="btn btn-danger btn-sm" onclick="deleteMember(\'' + m.id + '\', \'' + m.name + '\')">削除</button></td>' +
+        '</tr>';
+      }).join('');
+
+      document.getElementById('member-list').innerHTML =
+        '<table>' +
+          '<thead><tr><th>名前</th><th>社員番号</th><th>部署</th><th>店舗</th><th>等級</th><th>役割</th><th></th></tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+        '</table>';
+    }
+
+    // ============================================
+    // メンバーデータ CSV エクスポート
+    // ============================================
+    async function exportMembersCSV() {
+      showToast('CSVを準備中...');
+
+      // 1. メンバー一覧を取得
+      var membersQuery = client
+        .from('user_profiles')
+        .select('id, employee_id, name, grade, store, area, department_id')
+        .in('role', ['member', 'manager', 'dept_admin'])
+        .order('employee_id');
+
+      if (currentRole === 'dept_admin' && allowedMemberIds !== null) {
+        if (allowedMemberIds.length === 0) { showToast('対象メンバーがいません'); return; }
+        membersQuery = membersQuery.in('id', allowedMemberIds);
+      }
+
+      var { data: members, error: memErr } = await membersQuery;
+      if (memErr || !members || members.length === 0) { showToast('メンバー取得に失敗しました'); return; }
+
+      // 部署マスタを取得
+      var { data: depts } = await client.from('departments').select('id, name').order('id');
+
+      // 2. 進捗データを取得（check_progress / check_items / check_steps）
+      var { data: items }    = await client.from('check_items').select('id, grade');
+      var { data: steps }    = await client.from('check_steps').select('id, item_id');
+      var { data: progress } = await client.from('check_progress').select('user_id, step_id');
+
+      // 3. テスト結果を取得（member ごとの最新合格点）
+      var { data: testResults } = await client.from('test_results').select('user_id, score, passed').order('created_at', { ascending: false });
+
+      // 4. 各メンバーの進捗率・テスト点数・合否を算出して行を生成
+      var csvRows = ['\uFEFF名前,社員番号,部署,等級,店舗,エリア,進捗率(%),テスト点数,合否'];
+
+      members.forEach(function(m) {
+        // 進捗率：その等級の全ステップ中チェック済みの割合
+        var gradeItems = (items || []).filter(function(i) { return i.grade === m.grade; });
+        var gradeItemIds = gradeItems.map(function(i) { return i.id; });
+        var gradeSteps = (steps || []).filter(function(s) { return gradeItemIds.indexOf(s.item_id) !== -1; });
+        var gradeStepIds = gradeSteps.map(function(s) { return s.id; });
+        var checkedIds = (progress || []).filter(function(p) { return p.user_id === m.id; }).map(function(p) { return p.step_id; });
+        var checkedCount = gradeStepIds.filter(function(id) { return checkedIds.indexOf(id) !== -1; }).length;
+        var progressRate = gradeStepIds.length > 0 ? Math.round(checkedCount / gradeStepIds.length * 100) : 0;
+
+        // テスト点数・合否：直近の記録を使用
+        var memberResults = (testResults || []).filter(function(r) { return r.user_id === m.id; });
+        var latestResult = memberResults[0] || null;
+        var score  = latestResult ? latestResult.score  : '';
+        var passed = latestResult ? (latestResult.passed ? '合格' : '不合格') : '未受験';
+
+        var deptName = '';
+        if (m.department_id) {
+          var deptRecord = (depts || []).find(function(d) { return d.id === m.department_id; });
+          if (deptRecord) deptName = deptRecord.name;
+        }
+
+        var row = [
+          '"' + (m.name         || '') + '"',
+          '"' + (m.employee_id  || '') + '"',
+          '"' + deptName + '"',
+          (m.grade !== null && m.grade !== undefined ? m.grade + '等級' : ''),
+          '"' + (m.store || '') + '"',
+          '"' + (m.area  || '') + '"',
+          progressRate,
+          score,
+          passed
+        ].join(',');
+        csvRows.push(row);
+      });
+
+      // 5. ダウンロード
+      var blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement('a');
+      var today = new Date();
+      var dateStr = today.getFullYear() + ('0'+(today.getMonth()+1)).slice(-2) + ('0'+today.getDate()).slice(-2);
+      a.href     = url;
+      a.download = 'members_' + dateStr + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('CSVをエクスポートしました ✓');
+    }
+
+    async function updateDept(userId, deptId) {
+      var val = deptId ? parseInt(deptId) : null;
+      var { error } = await client.from('user_profiles').update({ department_id: val }).eq('id', userId);
+      if (error) { console.error('部署更新エラー:', error.message); return; }
+      showToast('部署を更新しました ✓');
+    }
+
+    async function updateStore(userId, store) {
+      var { data: storeData } = await client.from('stores').select('name, area_id').eq('name', store).limit(1);
+      var area = null;
+      if (storeData && storeData.length > 0) {
+        var { data: areaData } = await client.from('areas').select('name').eq('id', storeData[0].area_id).limit(1);
+        if (areaData && areaData.length > 0) area = areaData[0].name;
+      }
+      var { error } = await client.from('user_profiles').update({ store: store || null, area: area }).eq('id', userId);
+      if (error) { console.error('店舗更新エラー:', error.message); return; }
+      showToast('店舗を更新しました ✓');
+    }
+
+    async function updateGrade(userId, grade) {
+      var { error } = await client.from('user_profiles').update({ grade: parseInt(grade) }).eq('id', userId);
+      if (error) { console.error('等級更新エラー:', error.message); return; }
+      showToast('等級を更新しました ✓');
+    }
+
+    async function updateRole(userId, role) {
+      var { error } = await client.from('user_profiles').update({ role: role }).eq('id', userId);
+      if (error) { console.error('役割更新エラー:', error.message); return; }
+      showToast('役割を更新しました ✓');
+    }
+
+    // ============================================
+    // メンバーを追加する
+    // ============================================
+    function openAddModal() {
+      document.getElementById('add-modal').classList.add('show');
+    }
+
+    // ★追加：役割が部署管理者のときだけ部署選択欄を表示する
+    async function toggleDeptField() {
+      var role  = document.getElementById('add-role').value;
+      var field = document.getElementById('dept-field');
+      if (role === 'dept_admin') {
+        // 部署一覧を取得してセレクトボックスに反映する
+        var { data: depts } = await client.from('departments').select('id, name').order('id');
+        document.getElementById('add-dept-id').innerHTML =
+          (depts || []).map(function(d) {
+            return '<option value="' + d.id + '">' + d.name + '</option>';
+          }).join('');
+        field.style.display = 'block';
+      } else {
+        // 部署管理者以外は部署選択欄を隠す
+        field.style.display = 'none';
+      }
+    }
+
+    // ★変更：モーダルを閉じるとき部署選択欄も初期化する
+    function closeAddModal() {
+      closeModal('add-modal');
+      ['add-name','add-employee-id','add-password','add-store','add-area'].forEach(function(id) {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('add-role').value  = 'member';
+      document.getElementById('dept-field').style.display = 'none';
+    }
+
+    // ★変更：部署管理者のとき department_id も保存する
+    async function addMember() {
+      var name       = document.getElementById('add-name').value.trim();
+      var employeeId = document.getElementById('add-employee-id').value.trim();
+      var password   = document.getElementById('add-password').value;
+      var role       = document.getElementById('add-role').value;
+      var grade      = parseInt(document.getElementById('add-grade').value);
+      var store      = document.getElementById('add-store').value.trim();
+      var area       = document.getElementById('add-area').value.trim();
+      // 部署管理者のときだけ department_id を取得する。それ以外は null にする
+      var deptId     = (role === 'dept_admin')
+        ? parseInt(document.getElementById('add-dept-id').value)
+        : null;
+
+      if (!name || !employeeId || !password) { alert('名前・社員番号・パスワードは必須です'); return; }
+
+      var email = employeeId + '@education-app.com';
+      var { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+        email: email, password: password, email_confirm: true
+      });
+      if (authError) { alert('ユーザー作成エラー：' + authError.message); return; }
+
+      var { error: profileError } = await client.from('user_profiles').insert({
+        id:            authData.user.id,
+        employee_id:   employeeId,
+        name:          name,
+        role:          role,
+        grade:         grade,
+        store:         store || null,
+        area:          area  || null,
+        department_id: deptId          // ★追加：部署IDを保存する
+      });
+      if (profileError) { alert('プロフィール登録エラー：' + profileError.message); return; }
+
+      closeAddModal();
+      showToast(name + ' さんを追加しました ✓');
+      loadMembers();
+    }
+
+    async function deleteMember(userId, name) {
+      if (!confirm(name + ' さんを削除しますか？\nこの操作は取り消せません。')) return;
+      var { error: profileError } = await client.from('user_profiles').delete().eq('id', userId);
+      if (profileError) { alert('削除エラー：' + profileError.message); return; }
+      var { error: authError } = await adminClient.auth.admin.deleteUser(userId);
+      if (authError) { console.error('Auth削除エラー:', authError.message); }
+      showToast(name + ' さんを削除しました');
+      loadMembers();
+    }
+
+    // ============================================
+    // テスト管理
+    // ============================================
+    var currentTestSetId = null;
+
+    async function loadTests() {
+      var list = document.getElementById('test-list');
+      list.innerHTML = '<div class="loading-text">読み込み中...</div>';
+
+      // 部署を取得（dept_admin は自部署のみ）
+      var deptsQuery = client.from('departments').select('id, name').order('id');
+      if (currentRole === 'dept_admin' && currentDeptId) {
+        deptsQuery = deptsQuery.eq('id', currentDeptId);
+      }
+      var { data: depts } = await deptsQuery;
+      if (!depts || depts.length === 0) {
+        list.innerHTML = '<div class="loading-text">部署が登録されていません</div>' +
+          '<button class="btn btn-primary" style="margin-top:16px" onclick="openAddTestSetModal()">＋ 問題集を追加</button>';
+        return;
+      }
+
+      // カテゴリ・中間テーブル・問題集・問題を取得
+      var { data: categories } = await client.from('categories').select('id, name').order('id');
+      var { data: catDepts }   = await client.from('category_departments').select('category_id, department_id');
+      var { data: testSets }   = await client.from('test_sets').select('id, name, category_id, grade, pass_score').order('grade');
+      var { data: questions }  = await client.from('test_questions').select('id, question, type, point, test_set_id').order('id');
+
+      var typeLabels = { choice: '4択', truefalse: '○×', text: '記述' };
+      var typePills  = { choice: 'pill-blue', truefalse: 'pill-gray', text: 'pill-red' };
+      var grades = [0, 1, 2, 3, 4, 5];
+
+      var html = depts.map(function(dept) {
+        // 中間テーブルからこの部署に紐づくカテゴリを取得する
+        var deptCatIds = (catDepts || [])
+          .filter(function(cd) { return cd.department_id === dept.id; })
+          .map(function(cd) { return cd.category_id; });
+        var deptCats = (categories || []).filter(function(c) { return deptCatIds.indexOf(c.id) !== -1; });
+
+        var gradesHtml = grades.map(function(grade) {
+          // この等級 × この部署の問題集
+          var gradeSets = (testSets || []).filter(function(s) {
+            return s.grade === grade && deptCatIds.indexOf(s.category_id) !== -1;
+          });
+          if (gradeSets.length === 0) return '';
+
+          var setsHtml = gradeSets.map(function(s) {
+            var cat          = deptCats.find(function(c) { return c.id === s.category_id; });
+            var catName      = cat ? cat.name : '－';
+            var setQuestions = (questions || []).filter(function(q) { return q.test_set_id === s.id; });
+            var totalPoints  = setQuestions.reduce(function(sum, q) { return sum + (q.point || 0); }, 0);
+
+            var qRows = setQuestions.length > 0
+              ? setQuestions.map(function(q) {
+                  return '<tr>' +
+                    '<td>' + q.question + '</td>' +
+                    '<td><span class="pill ' + (typePills[q.type] || 'pill-gray') + '">' + (typeLabels[q.type] || q.type) + '</span></td>' +
+                    '<td>' + (q.point || 0) + '点</td>' +
+                    '<td><button class="btn btn-danger btn-sm" onclick="deleteQuestion(' + q.id + ')">削除</button></td>' +
+                  '</tr>';
+                }).join('')
+              : '<tr><td colspan="4" style="color:#9ca3af;font-size:13px">問題がありません</td></tr>';
+
+            return '<div class="card" style="margin-bottom:12px">' +
+              '<div class="card-header">' +
+                '<div>' +
+                  '<span style="font-weight:700">' + s.name + '</span>' +
+                  '<span style="font-size:12px;color:#6b7280;margin-left:12px">カテゴリ：' + catName + ' ／ 合格基準：' + s.pass_score + '点 ／ 合計配点：' + totalPoints + '点</span>' +
+                '</div>' +
+                '<div style="display:flex;gap:8px">' +
+                  '<button class="btn btn-primary btn-sm" onclick="openAddQuestionModal(' + s.id + ')">＋ 問題を追加</button>' +
+                  '<button class="btn btn-danger btn-sm" onclick="deleteTestSet(' + s.id + ', \'' + s.name + '\')">削除</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="card-body" style="padding:0">' +
+                '<table><thead><tr><th>問題文</th><th>形式</th><th>配点</th><th></th></tr></thead>' +
+                  '<tbody>' + qRows + '</tbody>' +
+                '</table>' +
+              '</div>' +
+            '</div>';
+          }).join('');
+
+          var testGradeBodyId = 'test-grade-' + dept.id + '-' + grade;
+          return '<div style="margin-bottom:16px">' +
+            '<div class="toggle-grade-header" onclick="toggleSection(\'' + testGradeBodyId + '\')">' +
+              '<span class="toggle-arrow" id="arr-' + testGradeBodyId + '">▾</span>' +
+              grade + '等級' +
+            '</div>' +
+            '<div id="' + testGradeBodyId + '">' + setsHtml + '</div>' +
+          '</div>';
+        }).join('');
+
+        var testDeptBodyId = 'test-dept-' + dept.id;
+        return '<div class="dept-card" style="margin-bottom:24px">' +
+          '<div class="dept-card-header toggle-btn" onclick="toggleSection(\'' + testDeptBodyId + '\')">' +
+            '<div style="display:flex;align-items:center;gap:8px">' +
+              '<span class="toggle-arrow" id="arr-' + testDeptBodyId + '">▾</span>' +
+              '<h3>' + dept.name + '</h3>' +
+            '</div>' +
+          '</div>' +
+          '<div id="' + testDeptBodyId + '">' +
+            '<div class="dept-card-body">' +
+              (gradesHtml.trim() ? gradesHtml : '<div style="font-size:13px;color:#9ca3af;padding:8px 0">問題集が登録されていません</div>') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      list.innerHTML = html +
+        '<button class="btn btn-primary" style="margin-top:4px" onclick="openAddTestSetModal()">＋ 問題集を追加</button>';
+    }
+
+    async function openAddTestSetModal() {
+      // 全カテゴリと中間テーブルを取得する
+      var { data: allCategories } = await client.from('categories').select('id, name').order('id');
+      var { data: catDepts }      = await client.from('category_departments').select('category_id, department_id');
+
+      var categories = allCategories || [];
+      if (currentRole === 'dept_admin' && currentDeptId) {
+        // dept_admin は自部署に紐づくカテゴリのみ表示する
+        var deptCatIds = (catDepts || [])
+          .filter(function(cd) { return cd.department_id === currentDeptId; })
+          .map(function(cd) { return cd.category_id; });
+        categories = categories.filter(function(c) { return deptCatIds.indexOf(c.id) !== -1; });
+      }
+      var sel = document.getElementById('add-testset-category');
+      sel.innerHTML = (categories || []).map(function(c) {
+        return '<option value="' + c.id + '">' + c.name + '</option>';
+      }).join('');
+      document.getElementById('add-testset-name').value = '';
+      document.getElementById('add-testset-pass').value = '80';
+      document.getElementById('add-testset-modal').classList.add('show');
+    }
+
+    async function addTestSet() {
+      var name  = document.getElementById('add-testset-name').value.trim();
+      var catId = parseInt(document.getElementById('add-testset-category').value);
+      var grade = parseInt(document.getElementById('add-testset-grade').value);
+      var pass  = parseInt(document.getElementById('add-testset-pass').value);
+      if (!name) { alert('問題集名を入力してください'); return; }
+
+      var { error } = await client.from('test_sets').insert({ name: name, category_id: catId, grade: grade, pass_score: pass });
+      if (error) { alert('追加エラー：' + error.message); return; }
+
+      closeModal('add-testset-modal');
+      showToast(name + ' を追加しました ✓');
+      loadTests();
+    }
+
+    async function deleteTestSet(id, name) {
+      if (!confirm(name + ' を削除しますか？\n問題もすべて削除されます。')) return;
+      var { data: qs } = await client.from('test_questions').select('id').eq('test_set_id', id);
+      if (qs && qs.length > 0) {
+        var ids = qs.map(function(q) { return q.id; });
+        await client.from('test_choices').delete().in('question_id', ids);
+        await client.from('test_questions').delete().eq('test_set_id', id);
+      }
+      await client.from('test_sets').delete().eq('id', id);
+      showToast(name + ' を削除しました');
+      loadTests();
+    }
+
+    function openAddQuestionModal(testSetId) {
+      currentTestSetId = testSetId;
+      ['add-question-text','c1-text','c2-text','c3-text','c4-text'].forEach(function(id) {
+        document.getElementById(id).value = '';
+      });
+      ['c1-correct','c2-correct','c3-correct','c4-correct'].forEach(function(id) {
+        document.getElementById(id).checked = false;
+      });
+      document.getElementById('add-question-type').value = 'choice';
+      document.getElementById('add-question-point').value = '10';
+      toggleChoices();
+      document.getElementById('add-question-modal').classList.add('show');
+    }
+
+    function toggleChoices() {
+      var type = document.getElementById('add-question-type').value;
+      document.getElementById('choices-area').style.display = type === 'choice' ? 'block' : 'none';
+    }
+
+    async function addQuestion() {
+      var text  = document.getElementById('add-question-text').value.trim();
+      var type  = document.getElementById('add-question-type').value;
+      var point = parseInt(document.getElementById('add-question-point').value);
+      if (!text) { alert('問題文を入力してください'); return; }
+      if (!currentTestSetId) { alert('問題集が選択されていません'); return; }
+
+      var { data: setData } = await client.from('test_sets').select('category_id, grade').eq('id', currentTestSetId).limit(1);
+      if (!setData || setData.length === 0) { alert('問題集の情報を取得できませんでした'); return; }
+
+      var { data: qData, error: qError } = await client.from('test_questions').insert({
+        test_set_id: currentTestSetId, category_id: setData[0].category_id,
+        grade: setData[0].grade, question: text, type: type, point: point, pass_score: 80
+      }).select().limit(1);
+
+      if (qError) { alert('追加エラー：' + qError.message); return; }
+
+      if (type === 'choice' && qData && qData[0]) {
+        var choices = [1,2,3,4].map(function(n) {
+          return {
+            question_id: qData[0].id,
+            body:        document.getElementById('c' + n + '-text').value.trim(),
+            is_correct:  document.getElementById('c' + n + '-correct').checked
+          };
+        }).filter(function(c) { return c.body; });
+        if (choices.length > 0) await client.from('test_choices').insert(choices);
+      }
+
+      closeModal('add-question-modal');
+      showToast('問題を追加しました ✓');
+      loadTests();
+    }
+
+    async function deleteQuestion(id) {
+      if (!confirm('この問題を削除しますか？')) return;
+      await client.from('test_choices').delete().eq('question_id', id);
+      var { error } = await client.from('test_questions').delete().eq('id', id);
+      if (error) { alert('削除エラー：' + error.message); return; }
+      showToast('問題を削除しました');
+      loadTests();
+    }
+
+    // ============================================
+    // カテゴリ・項目管理
+    // ============================================
+    var currentCategoryId = null;
+
+    // トグル開閉ユーティリティ
+    function toggleSection(bodyId) {
+      var el = document.getElementById(bodyId);
+      if (!el) return;
+      var arrow = document.getElementById('arr-' + bodyId);
+      if (el.style.display === 'none') {
+        el.style.display = '';
+        if (arrow) arrow.classList.remove('closed');
+      } else {
+        el.style.display = 'none';
+        if (arrow) arrow.classList.add('closed');
+      }
+    }
+
+    async function loadContent() {
+      var list = document.getElementById('content-list');
+      list.innerHTML = '<div class="loading-text">読み込み中...</div>';
+
+      // 部署を取得（dept_admin は自部署のみ）
+      var deptsQuery = client.from('departments').select('id, name').order('id');
+      if (currentRole === 'dept_admin' && currentDeptId) {
+        deptsQuery = deptsQuery.eq('id', currentDeptId);
+      }
+      var { data: depts } = await deptsQuery;
+      if (!depts || depts.length === 0) {
+        list.innerHTML = '<div class="loading-text">部署が登録されていません</div>';
+        return;
+      }
+
+      // カテゴリ・中間テーブル・項目・ステップを取得
+      var { data: categories } = await client.from('categories').select('id, name').order('id');
+      var { data: catDepts }   = await client.from('category_departments').select('category_id, department_id');
+      var { data: items }      = await client.from('check_items').select('id, name, grade, category_id').order('grade');
+      var { data: steps }      = await client.from('check_steps').select('id, item_id, name, order_no').order('order_no');
+
+      var grades = [0, 1, 2, 3, 4, 5];
+      var canDuplicate = (currentRole === 'admin' || currentRole === 'manager_admin');
+
+      var html = depts.map(function(dept) {
+        var deptBodyId = 'content-dept-' + dept.id;
+
+        // 中間テーブルからこの部署に紐づくカテゴリを取得する
+        var deptCatIds = (catDepts || [])
+          .filter(function(cd) { return cd.department_id === dept.id; })
+          .map(function(cd) { return cd.category_id; });
+        var deptCats = (categories || []).filter(function(c) { return deptCatIds.indexOf(c.id) !== -1; });
+
+        var gradesHtml = grades.map(function(grade) {
+          var gradeBodyId = 'content-grade-' + dept.id + '-' + grade;
+
+          var gradeCatsHtml = deptCats.map(function(cat) {
+            var catBodyId = 'content-cat-' + cat.id;
+            var catItems = (items || []).filter(function(i) { return i.category_id === cat.id && i.grade === grade; });
+            if (catItems.length === 0) return '';
+
+            var itemRows = catItems.map(function(item) {
+              var itemSteps = (steps || []).filter(function(s) { return s.item_id === item.id; });
+              var stepTags = itemSteps.map(function(s) {
+                return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#eef0fa;color:#495e9f;border-radius:20px;font-size:11px;margin:2px">' +
+                  s.order_no + '. ' + s.name +
+                  ' <button onclick="deleteStep(' + s.id + ')" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:12px;padding:0;line-height:1">×</button>' +
+                '</span>';
+              }).join('');
+
+              return '<tr>' +
+                '<td>' + item.name + '</td>' +
+                '<td>' +
+                  '<select class="btn-sm" onchange="updateItemGrade(' + item.id + ', this.value)">' +
+                    grades.map(function(g) {
+                      return '<option value="' + g + '"' + (item.grade === g ? ' selected' : '') + '>' + g + '等級</option>';
+                    }).join('') +
+                  '</select>' +
+                '</td>' +
+                '<td>' +
+                  '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">' +
+                    stepTags +
+                    '<button class="btn btn-secondary btn-sm" onclick="openAddStepModal(' + item.id + ')">＋ ステップ追加</button>' +
+                  '</div>' +
+                '</td>' +
+                '<td><button class="btn btn-danger btn-sm" onclick="deleteItem(' + item.id + ', \'' + item.name + '\')">削除</button></td>' +
+              '</tr>';
+            }).join('');
+
+            var dupBtn = canDuplicate
+              ? '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openDuplicateCategoryModal(' + cat.id + ', \'' + cat.name.replace(/'/g,"&#39;") + '\')">複製</button>'
+              : '';
+
+            return '<div class="card" style="margin-bottom:12px">' +
+              '<div class="card-header" style="cursor:pointer" onclick="toggleSection(\'' + catBodyId + '\')">' +
+                '<div style="display:flex;align-items:center;gap:6px">' +
+                  '<span class="toggle-arrow" id="arr-' + catBodyId + '">▾</span>' +
+                  '<h3>' + cat.name + '</h3>' +
+                '</div>' +
+                '<div style="display:flex;gap:6px" onclick="event.stopPropagation()">' +
+                  dupBtn +
+                  '<button class="btn btn-danger btn-sm" onclick="deleteCategory(' + cat.id + ', \'' + cat.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
+                '</div>' +
+              '</div>' +
+              '<div id="' + catBodyId + '">' +
+                '<div class="card-body">' +
+                  '<table><thead><tr><th>項目名</th><th>対象等級</th><th>ステップ</th><th></th></tr></thead>' +
+                    '<tbody>' + itemRows + '</tbody>' +
+                  '</table>' +
+                  '<div class="form-row" style="margin-top:12px">' +
+                    '<button class="btn btn-secondary btn-sm" onclick="openAddItemModal(' + cat.id + ')">＋ 項目を追加</button>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+          }).join('');
+
+          if (!gradeCatsHtml.trim()) return '';
+
+          return '<div style="margin-bottom:16px">' +
+            '<div class="toggle-grade-header" onclick="toggleSection(\'' + gradeBodyId + '\')">' +
+              '<span class="toggle-arrow" id="arr-' + gradeBodyId + '">▾</span>' +
+              grade + '等級' +
+            '</div>' +
+            '<div id="' + gradeBodyId + '">' + gradeCatsHtml + '</div>' +
+          '</div>';
+        }).join('');
+
+        return '<div class="dept-card" style="margin-bottom:24px">' +
+          '<div class="dept-card-header toggle-btn" onclick="toggleSection(\'' + deptBodyId + '\')">' +
+            '<div style="display:flex;align-items:center;gap:8px">' +
+              '<span class="toggle-arrow" id="arr-' + deptBodyId + '">▾</span>' +
+              '<h3>' + dept.name + '</h3>' +
+            '</div>' +
+          '</div>' +
+          '<div id="' + deptBodyId + '">' +
+            '<div class="dept-card-body">' +
+              (gradesHtml.trim() ? gradesHtml : '<div style="font-size:13px;color:#9ca3af;padding:8px 0">カテゴリが登録されていません</div>') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      list.innerHTML = html || '<div class="loading-text">カテゴリが登録されていません</div>';
+    }
+
+    async function openAddCategoryModal() {
+      document.getElementById('add-category-name').value = '';
+      var deptField  = document.getElementById('add-category-dept-field');
+      var checksArea = document.getElementById('add-category-dept-checks');
+
+      if (currentRole === 'dept_admin') {
+        // dept_admin は自部署固定なので選択欄を非表示
+        deptField.style.display = 'none';
+      } else {
+        // admin / manager_admin は全部署をチェックボックスで選択できる
+        deptField.style.display = 'block';
+        var { data: depts } = await client.from('departments').select('id, name').order('id');
+        checksArea.innerHTML = (depts || []).map(function(d) {
+          return '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">' +
+            '<input type="checkbox" class="dept-check" value="' + d.id + '" style="width:16px;height:16px">' +
+            d.name +
+          '</label>';
+        }).join('');
+      }
+      document.getElementById('add-category-modal').classList.add('show');
+    }
+
+    async function addCategory() {
+      var name = document.getElementById('add-category-name').value.trim();
+      if (!name) { alert('カテゴリ名を入力してください'); return; }
+
+      // 選択された部署IDを収集する
+      var selectedDeptIds = [];
+      if (currentRole === 'dept_admin') {
+        selectedDeptIds = [currentDeptId];
+      } else {
+        document.querySelectorAll('.dept-check:checked').forEach(function(cb) {
+          selectedDeptIds.push(parseInt(cb.value));
+        });
+        if (selectedDeptIds.length === 0) { alert('1つ以上の部署を選択してください'); return; }
+      }
+
+      // 部署ごとに独立した新しいカテゴリを作成する（同名でも別レコード・別部署）
+      for (var i = 0; i < selectedDeptIds.length; i++) {
+        var deptId = selectedDeptIds[i];
+        var { data: catData, error: catError } = await client
+          .from('categories').insert({ name: name }).select().limit(1);
+        if (catError) { alert('追加エラー：' + catError.message); return; }
+        var { error: linkError } = await client
+          .from('category_departments').insert({ category_id: catData[0].id, department_id: deptId });
+        if (linkError) { alert('部署紐づけエラー：' + linkError.message); return; }
+      }
+
+      closeModal('add-category-modal');
+      showToast(name + ' を追加しました ✓');
+      loadContent();
+    }
+
+    // ============================================
+    // カテゴリ複製（admin / manager_admin のみ）
+    // ============================================
+    var currentDuplicateCatId = null;
+
+    async function openDuplicateCategoryModal(catId, catName) {
+      currentDuplicateCatId = catId;
+      var { data: depts } = await client.from('departments').select('id, name').order('id');
+      var sel = document.getElementById('duplicate-category-dept');
+      sel.innerHTML = (depts || []).map(function(d) {
+        return '<option value="' + d.id + '">' + d.name + '</option>';
+      }).join('');
+      document.getElementById('duplicate-category-name').textContent = catName;
+      document.getElementById('duplicate-category-modal').classList.add('show');
+    }
+
+    async function duplicateCategory() {
+      var targetDeptId = parseInt(document.getElementById('duplicate-category-dept').value);
+
+      // ソースカテゴリ取得
+      var { data: srcCat } = await client.from('categories').select('id, name').eq('id', currentDuplicateCatId).limit(1);
+      if (!srcCat || srcCat.length === 0) { alert('カテゴリ情報が取得できませんでした'); return; }
+      var catName = srcCat[0].name;
+
+      // 新カテゴリを作成
+      var { data: newCat, error: catErr } = await client.from('categories').insert({ name: catName }).select().limit(1);
+      if (catErr) { alert('複製エラー：' + catErr.message); return; }
+      var newCatId = newCat[0].id;
+
+      // 複製先部署に紐づけ
+      var { error: linkErr } = await client.from('category_departments').insert({ category_id: newCatId, department_id: targetDeptId });
+      if (linkErr) { alert('部署紐づけエラー：' + linkErr.message); return; }
+
+      // 項目をコピー
+      var { data: srcItems } = await client.from('check_items').select('id, name, grade').eq('category_id', currentDuplicateCatId).order('id');
+
+      for (var i = 0; i < (srcItems || []).length; i++) {
+        var item = srcItems[i];
+        var { data: newItem, error: itemErr } = await client.from('check_items')
+          .insert({ name: item.name, grade: item.grade, category_id: newCatId }).select().limit(1);
+        if (itemErr || !newItem || newItem.length === 0) continue;
+
+        // ステップをコピー
+        var { data: srcSteps } = await client.from('check_steps').select('name, order_no').eq('item_id', item.id).order('order_no');
+        if (srcSteps && srcSteps.length > 0) {
+          await client.from('check_steps').insert(srcSteps.map(function(s) {
+            return { item_id: newItem[0].id, name: s.name, order_no: s.order_no };
+          }));
+        }
+      }
+
+      closeModal('duplicate-category-modal');
+      showToast(catName + ' を複製しました ✓');
+      loadContent();
+    }
+
+    async function deleteCategory(catId, name) {
+      if (!confirm(name + ' を削除しますか？\n所属する項目も削除されます。')) return;
+      await client.from('check_items').delete().eq('category_id', catId);
+      var { error } = await client.from('categories').delete().eq('id', catId);
+      if (error) { alert('削除エラー：' + error.message); return; }
+      showToast(name + ' を削除しました');
+      loadContent();
+    }
+
+    var currentStepItemId = null;
+
+    function openAddStepModal(itemId) {
+      currentStepItemId = itemId;
+      document.getElementById('add-step-name').value = '';
+      document.getElementById('add-step-modal').classList.add('show');
+    }
+
+    async function addStep() {
+      var el = document.getElementById('add-step-name');
+      if (!el) { alert('入力欄が見つかりません'); return; }
+      var name = el.value.trim();
+      if (!name) { alert('ステップ名を入力してください'); return; }
+
+      var { data: existing } = await client.from('check_steps').select('order_no')
+        .eq('item_id', currentStepItemId).order('order_no', { ascending: false }).limit(1);
+      var nextOrder = (existing && existing.length > 0) ? existing[0].order_no + 1 : 1;
+
+      var { error } = await client.from('check_steps').insert({ item_id: currentStepItemId, name: name, order_no: nextOrder });
+      if (error) { alert('追加エラー：' + error.message); return; }
+      closeModal('add-step-modal');
+      showToast(name + ' を追加しました ✓');
+      loadContent();
+    }
+
+    async function deleteStep(stepId) {
+      if (!confirm('このステップを削除しますか？')) return;
+      var { error } = await client.from('check_steps').delete().eq('id', stepId);
+      if (error) { alert('削除エラー：' + error.message); return; }
+      showToast('ステップを削除しました');
+      loadContent();
+    }
+
+    async function updateItemGrade(itemId, grade) {
+      var { error } = await client.from('check_items').update({ grade: parseInt(grade) }).eq('id', itemId);
+      if (error) { console.error('等級更新エラー:', error.message); return; }
+      showToast('対象等級を更新しました ✓');
+    }
+
+    // ============================================
+    // 項目追加（ステップ同時追加対応）
+    // ============================================
+    var pendingSteps = [];
+
+    function addPendingStep() {
+      var input = document.getElementById('new-step-name');
+      var name = input.value.trim();
+      if (!name) return;
+      pendingSteps.push(name);
+      input.value = '';
+      renderPendingSteps();
+    }
+
+    function removePendingStep(i) {
+      pendingSteps.splice(i, 1);
+      renderPendingSteps();
+    }
+
+    function renderPendingSteps() {
+      var container = document.getElementById('pending-steps-list');
+      if (!container) return;
+      if (pendingSteps.length === 0) {
+        container.innerHTML = '<span style="font-size:12px;color:#9ca3af">ステップなし</span>';
+        return;
+      }
+      container.innerHTML = pendingSteps.map(function(s, i) {
+        return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#eef0fa;color:#495e9f;border-radius:20px;font-size:11px;margin:2px">' +
+          (i + 1) + '. ' + s +
+          ' <button onclick="removePendingStep(' + i + ')" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:12px;padding:0;line-height:1">×</button>' +
+        '</span>';
+      }).join('');
+    }
+
+    function openAddItemModal(catId) {
+      currentCategoryId = catId;
+      pendingSteps = [];
+      document.getElementById('add-item-name').value = '';
+      document.getElementById('new-step-name').value = '';
+      renderPendingSteps();
+      document.getElementById('add-item-modal').classList.add('show');
+    }
+
+    async function addItem() {
+      var name  = document.getElementById('add-item-name').value.trim();
+      var grade = parseInt(document.getElementById('add-item-grade').value);
+      if (!name) { alert('項目名を入力してください'); return; }
+
+      var { data: itemData, error } = await client
+        .from('check_items')
+        .insert({ name: name, grade: grade, category_id: currentCategoryId })
+        .select().limit(1);
+      if (error) { alert('追加エラー：' + error.message); return; }
+
+      // ステップを一括保存
+      if (pendingSteps.length > 0 && itemData && itemData[0]) {
+        var stepsToInsert = pendingSteps.map(function(stepName, idx) {
+          return { item_id: itemData[0].id, name: stepName, order_no: idx + 1 };
+        });
+        var { error: stepError } = await client.from('check_steps').insert(stepsToInsert);
+        if (stepError) { console.error('ステップ保存エラー:', stepError.message); }
+      }
+
+      closeModal('add-item-modal');
+      showToast(name + ' を追加しました ✓');
+      loadContent();
+    }
+
+    async function deleteItem(itemId, name) {
+      if (!confirm(name + ' を削除しますか？')) return;
+      var { error } = await client.from('check_items').delete().eq('id', itemId);
+      if (error) { alert('削除エラー：' + error.message); return; }
+      showToast(name + ' を削除しました');
+      loadContent();
+    }
+
+    // ============================================
+    // 部署・エリア・店舗管理
+    // ============================================
+    var currentAreaId = null; // 店舗追加時に使うエリアID
+
+    // 部署→エリア→店舗の3階層で表示する
+    async function loadOrg() {
+      var list = document.getElementById('org-list');
+
+      // 再描画前に開いているセクションのIDを保存する
+      var openIds = [];
+      list.querySelectorAll('[id^="org-dept-"], [id^="org-area-"]').forEach(function(el) {
+        if (el.style.display !== 'none') openIds.push(el.id);
+      });
+
+      list.innerHTML = '<div class="loading-text">読み込み中...</div>';
+
+      var deptsQuery = client.from('departments').select('id, name').order('id');
+      // dept_admin の場合は自分の部署のみ取得する
+      if (currentRole === 'dept_admin' && currentDeptId) {
+        deptsQuery = deptsQuery.eq('id', currentDeptId);
+      }
+
+      var { data: depts,  error } = await deptsQuery;
+      var { data: areas  }        = await client.from('areas').select('id, name, department_id').order('id');
+      var { data: stores }        = await client.from('stores').select('id, name, area_id').order('id');
+
+      if (error) { console.error('部署取得エラー:', error.message); return; }
+
+      if (!depts || depts.length === 0) {
+        list.innerHTML = '<div class="loading-text">部署が登録されていません</div>';
+        return;
+      }
+
+      // dept_admin は部署の削除ボタンを非表示にする（自部署は削除不可）
+      var isDeptAdmin = (currentRole === 'dept_admin');
+
+      var html = depts.map(function(dept) {
+        var deptAreas = (areas || []).filter(function(a) { return a.department_id === dept.id; });
+        var deptBodyId = 'org-dept-' + dept.id;
+        var deptStoreCount = deptAreas.reduce(function(sum, area) {
+          return sum + (stores || []).filter(function(s) { return s.area_id === area.id; }).length;
+        }, 0);
+
+        var areasHtml = deptAreas.length > 0
+          ? deptAreas.map(function(area) {
+              var areaStores = (stores || []).filter(function(s) { return s.area_id === area.id; });
+              var areaBodyId = 'org-area-' + area.id;
+
+              var storeRows = areaStores.length > 0
+                ? areaStores.map(function(s) {
+                    return '<tr>' +
+                      '<td>' + s.name + '</td>' +
+                      '<td><div class="td-actions">' +
+                        '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="openMoveStoreModal(' + s.id + ', \'' + s.name + '\')">移動</button>' +
+                        '<button class="btn btn-danger btn-sm" onclick="deleteStore(' + s.id + ', \'' + s.name + '\')">削除</button>' +
+                      '</div></td>' +
+                    '</tr>';
+                  }).join('')
+                : '<tr><td colspan="2" style="color:#9ca3af;font-size:13px">店舗がありません</td></tr>';
+
+              return '<div class="area-card">' +
+                '<div class="area-card-header toggle-btn" style="cursor:pointer" onclick="toggleSection(\'' + areaBodyId + '\')">' +
+                  '<h4 style="display:flex;align-items:center;gap:6px">' +
+                    '<em class="toggle-arrow closed" id="arr-' + areaBodyId + '">▾</em>' +
+                    area.name +
+                    '<span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:4px">' + areaStores.length + '店舗</span>' +
+                  '</h4>' +
+                  '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteArea(' + area.id + ', \'' + area.name + '\')">削除</button>' +
+                '</div>' +
+                '<div id="' + areaBodyId + '" class="area-card-body" style="display:none">' +
+                  '<table><thead><tr><th>店舗名</th><th></th></tr></thead>' +
+                    '<tbody>' + storeRows + '</tbody>' +
+                  '</table>' +
+                  '<div class="form-row" style="margin-top:10px">' +
+                    '<button class="btn btn-secondary btn-sm" onclick="openAddStoreModal(' + area.id + ')">＋ 店舗を追加</button>' +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+            }).join('')
+          : '<div style="font-size:13px;color:#9ca3af;padding:8px 0">エリアがありません</div>';
+
+        // dept_admin には部署の削除ボタンを表示しない
+        var deleteDeptBtn = isDeptAdmin ? '' :
+          '<button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4)" onclick="event.stopPropagation();deleteDept(' + dept.id + ', \'' + dept.name + '\')">削除</button>';
+
+        return '<div class="dept-card">' +
+          '<div class="dept-card-header toggle-btn" onclick="toggleSection(\'' + deptBodyId + '\')">' +
+            '<h3 style="display:flex;align-items:center;gap:8px">' +
+              '<em class="toggle-arrow closed" id="arr-' + deptBodyId + '" style="color:rgba(255,255,255,0.8)">▾</em>' +
+              dept.name +
+              '<span style="font-size:12px;font-weight:400;opacity:0.75;margin-left:4px">' + deptAreas.length + 'エリア・' + deptStoreCount + '店舗</span>' +
+            '</h3>' +
+            deleteDeptBtn +
+          '</div>' +
+          '<div id="' + deptBodyId + '" class="dept-card-body" style="display:none">' +
+            areasHtml +
+            '<div style="margin-top:12px">' +
+              '<button class="btn btn-secondary btn-sm" onclick="openAddAreaModal(' + dept.id + ')">＋ エリアを追加</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      list.innerHTML = html;
+
+      // 開いていたセクションを復元する
+      openIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = '';
+        var arrow = document.getElementById('arr-' + id);
+        if (arrow) arrow.classList.remove('closed');
+      });
+    }
+
+    function openAddDeptModal() {
+      document.getElementById('add-dept-name').value = '';
+      document.getElementById('add-dept-modal').classList.add('show');
+    }
+
+    async function addDept() {
+      var name = document.getElementById('add-dept-name').value.trim();
+      if (!name) { alert('部署名を入力してください'); return; }
+      var { error } = await client.from('departments').insert({ name: name });
+      if (error) { alert('追加エラー：' + error.message); return; }
+      closeModal('add-dept-modal');
+      showToast(name + ' を追加しました ✓');
+      loadOrg();
+    }
+
+    async function deleteDept(deptId, name) {
+      if (!confirm(name + ' を削除しますか？\n所属するエリア・店舗も削除されます。')) return;
+      var { data: deptAreas } = await client.from('areas').select('id').eq('department_id', deptId);
+      if (deptAreas && deptAreas.length > 0) {
+        var areaIds = deptAreas.map(function(a) { return a.id; });
+        await client.from('stores').delete().in('area_id', areaIds);
+        await client.from('areas').delete().in('id', areaIds);
+      }
+      var { error } = await client.from('departments').delete().eq('id', deptId);
+      if (error) { alert('削除エラー：' + error.message); return; }
+      showToast(name + ' を削除しました');
+      loadOrg();
+    }
+
+    async function openAddAreaModal(deptId) {
+      var { data: depts } = await client.from('departments').select('id, name').order('id');
+      var sel = document.getElementById('add-area-dept');
+      sel.innerHTML = (depts || []).map(function(d) {
+        return '<option value="' + d.id + '"' + (d.id === deptId ? ' selected' : '') + '>' + d.name + '</option>';
+      }).join('');
+      document.getElementById('add-area-name').value = '';
+      document.getElementById('add-area-modal').classList.add('show');
+    }
+
+    async function addArea() {
+      var name   = document.getElementById('add-area-name').value.trim();
+      var deptId = parseInt(document.getElementById('add-area-dept').value);
+      if (!name) { alert('エリア名を入力してください'); return; }
+      var { error } = await client.from('areas').insert({ name: name, department_id: deptId });
+      if (error) { alert('追加エラー：' + error.message); return; }
+      closeModal('add-area-modal');
+      showToast(name + ' を追加しました ✓');
+      loadOrg();
+    }
+
+    async function deleteArea(areaId, name) {
+      if (!confirm(name + ' を削除しますか？\n所属する店舗も削除されます。')) return;
+      await client.from('stores').delete().eq('area_id', areaId);
+      var { error } = await client.from('areas').delete().eq('id', areaId);
+      if (error) { alert('削除エラー：' + error.message); return; }
+      showToast(name + ' を削除しました');
+      loadOrg();
+    }
+
+    function openAddStoreModal(areaId) {
+      currentAreaId = areaId;
+      document.getElementById('add-store-name').value = '';
+      document.getElementById('add-store-modal').classList.add('show');
+    }
+
+    async function addStore() {
+      var name = document.getElementById('add-store-name').value.trim();
+      if (!name) { alert('店舗名を入力してください'); return; }
+      var { error } = await client.from('stores').insert({ name: name, area_id: currentAreaId });
+      if (error) { alert('追加エラー：' + error.message); return; }
+      closeModal('add-store-modal');
+      showToast(name + ' を追加しました ✓');
+      loadOrg();
+    }
+
+    async function deleteStore(storeId, name) {
+      if (!confirm(name + ' を削除しますか？')) return;
+      var { error } = await client.from('stores').delete().eq('id', storeId);
+      if (error) { alert('削除エラー：' + error.message); return; }
+      showToast(name + ' を削除しました');
+      loadOrg();
+    }
+
+    var moveStoreId = null;
+
+    async function openMoveStoreModal(storeId, storeName) {
+      moveStoreId = storeId;
+      document.getElementById('move-store-label').textContent = storeName;
+
+      // エリア一覧を部署でグルーピングして取得
+      var { data: depts } = await client.from('departments').select('id, name').order('id');
+      var { data: areas } = await client.from('areas').select('id, name, department_id').order('id');
+
+      var sel = document.getElementById('move-store-area');
+      sel.innerHTML = (depts || []).map(function(dept) {
+        var deptAreas = (areas || []).filter(function(a) { return a.department_id === dept.id; });
+        if (deptAreas.length === 0) return '';
+        return '<optgroup label="' + dept.name + '">' +
+          deptAreas.map(function(a) {
+            return '<option value="' + a.id + '">' + a.name + '</option>';
+          }).join('') +
+        '</optgroup>';
+      }).join('');
+
+      document.getElementById('move-store-modal').classList.add('show');
+    }
+
+    async function moveStore() {
+      var areaId = parseInt(document.getElementById('move-store-area').value);
+      if (!areaId) { alert('移動先エリアを選択してください'); return; }
+      var { error } = await client.from('stores').update({ area_id: areaId }).eq('id', moveStoreId);
+      if (error) { alert('移動エラー：' + error.message); return; }
+      closeModal('move-store-modal');
+      showToast('店舗を移動しました ✓');
+      loadOrg();
+    }
+
+    // ============================================
+    // 共通モーダル操作
+    // ============================================
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('show');
+    }
+
+    // ============================================
+    // 再試験管理
+    // ============================================
+    async function loadRetest() {
+      var list = document.getElementById('retest-list');
+      list.innerHTML = '<div class="loading-text">読み込み中...</div>';
+
+      var retestQuery = client.from('test_results')
+        .select('user_id, category, grade, score, passed, taken_at')
+        .eq('passed', false).order('taken_at', { ascending: false });
+      // dept_admin の場合は自部署メンバーの結果のみ表示する
+      if (currentRole === 'dept_admin' && allowedMemberIds !== null && allowedMemberIds.length > 0) {
+        retestQuery = retestQuery.in('user_id', allowedMemberIds);
+      }
+
+      var { data: results, error } = await retestQuery;
+
+      if (error) { list.innerHTML = '<div class="loading-text">取得エラー</div>'; return; }
+
+      var { data: members }       = await client.from('user_profiles').select('id, name, store');
+      var { data: permissions }   = await client.from('retest_permissions').select('user_id, category, grade, used_at').is('used_at', null);
+      var { data: passedResults } = await client.from('test_results').select('user_id, category, grade').eq('passed', true);
+
+      var passedSet = (passedResults || []).map(function(r) { return r.user_id + '_' + r.category + '_' + r.grade; });
+      var filteredResults = (results || []).filter(function(r) {
+        return passedSet.indexOf(r.user_id + '_' + r.category + '_' + r.grade) === -1;
+      });
+
+      var seen = {};
+      filteredResults = filteredResults.filter(function(r) {
+        var key = r.user_id + '_' + r.category + '_' + r.grade;
+        if (seen[key]) return false;
+        seen[key] = true;
+        return true;
+      });
+
+      if (!filteredResults || filteredResults.length === 0) {
+        list.innerHTML = '<div class="loading-text">再試験が必要なメンバーはいません</div>';
+        return;
+      }
+
+      var rows = filteredResults.map(function(r) {
+        var member = (members || []).find(function(m) { return m.id === r.user_id; });
+        var name   = member ? member.name : r.user_id;
+        var store  = member ? (member.store || '未設定') : '－';
+        var date   = new Date(r.taken_at).toLocaleDateString('ja-JP');
+        var hasPermission = (permissions || []).some(function(p) {
+          return p.user_id === r.user_id && p.category === r.category && p.grade === r.grade;
+        });
+
+        return '<tr>' +
+          '<td>' + name + '</td><td>' + store + '</td><td>' + r.category + '</td>' +
+          '<td>' + r.grade + '等級</td><td>' + r.score + '点</td><td>' + date + '</td>' +
+          '<td>' + (hasPermission
+            ? '<span style="font-size:12px;color:#2e7d32;font-weight:700">許可済み</span>'
+            : '<button class="btn btn-primary btn-sm" onclick="permitRetest(\'' + r.user_id + '\',\'' + r.category + '\',' + r.grade + ')">再試験を許可</button>'
+          ) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      list.innerHTML = '<div class="card"><div class="card-body" style="padding:0">' +
+        '<table><thead><tr><th>名前</th><th>店舗</th><th>カテゴリ</th><th>等級</th><th>点数</th><th>受験日</th><th></th></tr></thead>' +
+          '<tbody>' + rows + '</tbody></table></div></div>';
+    }
+
+    async function permitRetest(userId, category, grade) {
+      var { error } = await client.from('retest_permissions').insert({ user_id: userId, category: category, grade: grade });
+      if (error) { alert('エラー：' + error.message); return; }
+      showToast('再試験を許可しました ✓');
+      loadRetest();
+    }
+
+    // ============================================
+    // 記述式採点
+    // ============================================
+    async function loadAnswers() {
+      var filter = document.getElementById('filter-graded').value;
+      var list = document.getElementById('grading-list');
+      list.innerHTML = '<div class="loading-text">読み込み中...</div>';
+
+      var query = client.from('text_answers').select('*').order('submitted_at', { ascending: false });
+      if (filter === 'ungraded') query = query.is('score', null);
+      if (filter === 'graded')   query = query.not('score', 'is', null);
+      // dept_admin の場合は自部署メンバーの回答のみ表示する
+      if (currentRole === 'dept_admin' && allowedMemberIds !== null && allowedMemberIds.length > 0) {
+        query = query.in('user_id', allowedMemberIds);
+      }
+
+      var { data, error } = await query;
+      if (error) { list.innerHTML = '<div class="loading-text">読み込みに失敗しました</div>'; return; }
+      if (!data || data.length === 0) {
+        list.innerHTML = '<div class="loading-text">該当する回答がありません</div>';
+        return;
+      }
+
+      var { data: members } = await client.from('user_profiles').select('id, name');
+
+      list.innerHTML = data.map(function(row) {
+        var member = (members || []).find(function(m) { return m.id === row.user_id; });
+        var memberName = member ? member.name : row.user_id;
+        var isGraded = row.score !== null;
+        var date = new Date(row.submitted_at).toLocaleDateString('ja-JP');
+        return '<div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;margin-bottom:16px;overflow:hidden">' +
+          '<div style="padding:14px 20px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between">' +
+            '<div><span class="pill ' + (isGraded ? 'pill-green' : 'pill-yellow') + '" style="margin-right:8px">' + (isGraded ? '採点済み' : '未採点') + '</span><strong>' + memberName + '</strong></div>' +
+            '<span style="font-size:12px;color:#9ca3af">' + date + ' 提出</span>' +
+          '</div>' +
+          '<div style="padding:16px 20px">' +
+            '<div style="font-size:12px;color:#6b7280;margin-bottom:8px">カテゴリ：' + row.category + ' ／ ' + row.grade + '等級</div>' +
+            '<div style="font-size:13px;color:#6b7280;margin-bottom:8px">問題：' + row.question + '</div>' +
+            '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.7;margin-bottom:14px">' + row.answer + '</div>' +
+            (isGraded
+              ? '<div style="font-size:13px;color:#2e7d32;font-weight:700">採点済み：' + row.score + '点</div>'
+              : '<div style="display:flex;align-items:center;gap:10px"><label style="font-size:13px">点数：</label><input type="number" min="0" max="100" placeholder="0〜100" id="score-' + row.id + '" style="width:80px"><button class="btn btn-primary btn-sm" onclick="saveScore(' + row.id + ')">保存</button></div>'
+            ) +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    async function saveScore(id) {
+      var input = document.getElementById('score-' + id);
+      var score = parseInt(input.value);
+      if (isNaN(score) || score < 0 || score > 100) { alert('0〜100の点数を入力してください'); return; }
+      var { error } = await client.from('text_answers').update({ score: score, graded_at: new Date().toISOString() }).eq('id', id);
+      if (error) { console.error('保存エラー:', error.message); return; }
+      showToast('採点を保存しました ✓');
+      loadAnswers();
+    }
+
+    // ============================================
+    // 共通ユーティリティ
+    // ============================================
+    function switchPage(page, btn) {
+      document.querySelectorAll('.sidenav-item').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+      document.getElementById('page-' + page).classList.add('active');
+      if (page === 'grading') loadAnswers();
+      if (page === 'retest')  loadRetest();
+      if (page === 'member')  loadMembers();
+      if (page === 'org')     loadOrg();
+      if (page === 'content') loadContent();
+      if (page === 'test')    loadTests();
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(function() { t.classList.remove('show'); }, 2500);
+    }
+
+    function removeStep(btn) { btn.parentElement.remove(); }
+
+    initUser();
+  </script>
+</body>
+</html>
