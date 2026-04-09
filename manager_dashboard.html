@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ダッシュボード — 飲食事業部 教育管理アプリ</title>
+  <title>ダッシュボード — AZism 教育進捗管理</title>
   <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -88,7 +88,7 @@
 </head>
 <body>
   <header>
-    <span class="app-name">飲食事業部 教育管理アプリ</span>
+    <span class="app-name">AZism 教育進捗管理</span>
     <div class="user-info">
       <span class="role-badge" id="role-badge">MG</span>
       <span id="header-name">読み込み中...</span>
@@ -192,7 +192,7 @@
       document.getElementById('header-name').textContent = profile.name;
       var roleLabels = { 'manager': 'MG', 'manager_admin': '全権管理者', 'dept_admin': '部署管理者' };
       document.getElementById('role-badge').textContent = roleLabels[profile.role] || 'MG';
-      if (profile.role === 'dept_admin') {
+      if (profile.role === 'dept_admin' || profile.role === 'manager_admin') {
         document.getElementById('admin-link').style.display = 'inline';
       }
 

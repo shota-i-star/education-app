@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>管理画面 — 飲食事業部 教育管理アプリ</title>
+  <title>管理画面 — AZism 教育進捗管理</title>
   <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
   <style>
@@ -110,7 +110,7 @@
 </head>
 <body>
   <header>
-    <span class="app-name">飲食事業部 教育管理アプリ</span>
+    <span class="app-name">AZism 教育進捗管理</span>
     <div class="user-info">
       <span class="role-badge">全権管理者</span>
       <span id="header-name">読み込み中...</span>
@@ -469,8 +469,9 @@
         <select id="add-role" onchange="toggleDeptField()">
           <option value="member">メンバー</option>
           <option value="manager">MG</option>
-          <option value="manager_admin">全権管理者</option>
           <option value="dept_admin">部署管理者</option>
+          <!-- 全権管理者は manager_admin のみ付与可能。initUser() で制御 -->
+          <option value="manager_admin" id="role-option-manager-admin">全権管理者</option>
         </select>
       </div>
       <div class="modal-field">
@@ -580,6 +581,12 @@
 
       await initDeptFilter(); // dept_admin の場合: allowedMemberIds を先に確定させる
 
+      // dept_admin は全権管理者ロールを付与できないため選択肢を非表示にする
+      if (currentRole === 'dept_admin') {
+        var managerAdminOpt = document.getElementById('role-option-manager-admin');
+        if (managerAdminOpt) managerAdminOpt.style.display = 'none';
+      }
+
       // dept_admin には「新しい部署を追加」ボタンを非表示にする（他部署の追加は不可）
       if (currentRole === 'dept_admin') {
         var btnAddDept = document.getElementById('btn-add-dept');
@@ -625,12 +632,18 @@
         return;
       }
 
+      // 順番：メンバー→MG→部署管理者→全権管理者
+      // dept_admin は全権管理者を付与できない
       var roleLabels = {
         member:        'メンバー',
         manager:       'MG',
-        manager_admin: '全権管理者',
-        dept_admin:    '部署管理者'
+        dept_admin:    '部署管理者',
+        manager_admin: '全権管理者'
       };
+      // 全権管理者のみが manager_admin を付与できる
+      var assignableRoles = (currentRole === 'manager_admin')
+        ? roleLabels
+        : { member: 'メンバー', manager: 'MG', dept_admin: '部署管理者' };
 
       var rows = members.map(function(m) {
         // 部署プルダウン
@@ -669,9 +682,13 @@
           '</td>' +
           '<td>' +
             '<select class="btn-sm" onchange="updateRole(\'' + m.id + '\', this.value)">' +
-              Object.keys(roleLabels).map(function(r) {
-                return '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + roleLabels[r] + '</option>';
+              Object.keys(assignableRoles).map(function(r) {
+                return '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + assignableRoles[r] + '</option>';
               }).join('') +
+              // 現在が全権管理者だが選択肢に含まれない場合（dept_admin が見ているとき）は表示のみ追加
+              (m.role === 'manager_admin' && currentRole !== 'manager_admin'
+                ? '<option value="manager_admin" selected disabled>全権管理者</option>'
+                : '') +
             '</select>' +
           '</td>' +
           '<td><button class="btn btn-danger btn-sm" onclick="deleteMember(\'' + m.id + '\', \'' + m.name + '\')">削除</button></td>' +
