@@ -518,8 +518,7 @@
       </div>
       <div class="modal-field">
         <label>役割</label>
-        <!-- ★変更：dept_admin を追加・onchange で部署欄を表示切替 -->
-        <select id="add-role" onchange="toggleDeptField()">
+        <select id="add-role">
           <option value="member">メンバー</option>
           <option value="manager">MG</option>
           <option value="dept_admin">部署管理者</option>
@@ -546,10 +545,12 @@
         <label>エリア</label>
         <input type="text" id="add-area" placeholder="例：東京エリア">
       </div>
-      <!-- ★追加：部署管理者のときだけ表示する部署選択欄 -->
-      <div class="modal-field" id="dept-field" style="display:none">
-        <label>所属部署（部署管理者の場合のみ）</label>
-        <select id="add-dept-id"></select>
+      <!-- 部署選択欄：全権管理者は選択式・部署管理者は自動設定 -->
+      <div class="modal-field" id="dept-field">
+        <label>所属部署 <span style="color:#bd3c40">*</span></label>
+        <select id="add-dept-id">
+          <option value="">選択してください</option>
+        </select>
       </div>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeAddModal()">キャンセル</button>
@@ -881,36 +882,43 @@
     // ============================================
     // メンバーを追加する
     // ============================================
-    function openAddModal() {
-      document.getElementById('add-modal').classList.add('show');
-    }
+    // メンバー追加モーダルを開く（部署リストを取得してロール別に設定）
+    async function openAddModal() {
+      var { data: depts } = await client.from('departments').select('id, name').order('id');
+      var deptSelect = document.getElementById('add-dept-id');
 
-    // ★追加：役割が部署管理者のときだけ部署選択欄を表示する
-    async function toggleDeptField() {
-      var role  = document.getElementById('add-role').value;
-      var field = document.getElementById('dept-field');
-      if (role === 'dept_admin') {
-        // 部署一覧を取得してセレクトボックスに反映する
-        var { data: depts } = await client.from('departments').select('id, name').order('id');
-        document.getElementById('add-dept-id').innerHTML =
+      if (currentRole === 'manager_admin') {
+        // 全権管理者：全部署から選択（必須）
+        deptSelect.innerHTML = '<option value="">選択してください</option>' +
           (depts || []).map(function(d) {
             return '<option value="' + d.id + '">' + d.name + '</option>';
           }).join('');
-        field.style.display = 'block';
-      } else {
-        // 部署管理者以外は部署選択欄を隠す
-        field.style.display = 'none';
+        deptSelect.disabled = false;
+        deptSelect.style.background = '';
+      } else if (currentRole === 'dept_admin') {
+        // 部署管理者：自部署を固定（変更不可）
+        var myDept = (depts || []).find(function(d) { return d.id === currentDeptId; });
+        deptSelect.innerHTML = myDept
+          ? '<option value="' + myDept.id + '">' + myDept.name + '</option>'
+          : '<option value="">部署未設定</option>';
+        deptSelect.disabled = true;
+        deptSelect.style.background = '#f0f4f8';
       }
+
+      document.getElementById('add-modal').classList.add('show');
     }
 
-    // ★変更：モーダルを閉じるとき部署選択欄も初期化する
+    // モーダルを閉じるとき各フィールドを初期化する
     function closeAddModal() {
       closeModal('add-modal');
       ['add-name','add-employee-id','add-password','add-store','add-area'].forEach(function(id) {
         document.getElementById(id).value = '';
       });
-      document.getElementById('add-role').value  = 'member';
-      document.getElementById('dept-field').style.display = 'none';
+      document.getElementById('add-role').value = 'member';
+      var deptSelect = document.getElementById('add-dept-id');
+      deptSelect.innerHTML = '<option value="">選択してください</option>';
+      deptSelect.disabled = false;
+      deptSelect.style.background = '';
     }
 
     // ★変更：部署管理者のとき department_id も保存する
@@ -922,12 +930,11 @@
       var grade      = parseInt(document.getElementById('add-grade').value);
       var store      = document.getElementById('add-store').value.trim();
       var area       = document.getElementById('add-area').value.trim();
-      // 部署管理者のときだけ department_id を取得する。それ以外は null にする
-      var deptId     = (role === 'dept_admin')
-        ? parseInt(document.getElementById('add-dept-id').value)
-        : null;
+      // 部署は全ロールで必須
+      var deptId = parseInt(document.getElementById('add-dept-id').value) || null;
 
       if (!name || !employeeId || !password) { alert('名前・社員番号・パスワードは必須です'); return; }
+      if (!deptId) { alert('所属部署を選択してください'); return; }
 
       var email = employeeId + '@education-app.com';
       var { data: authData, error: authError } = await adminClient.auth.admin.createUser({
