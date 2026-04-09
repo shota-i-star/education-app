@@ -56,12 +56,26 @@
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #f9fafb; }
     .td-actions { display: flex; gap: 6px; }
-    /* メンバー一覧テーブル：横スクロール対応 */
-    #member-list { overflow-x: auto; }
-    #member-list table { min-width: 700px; }
-    #member-list select.btn-sm { max-width: 130px; width: auto; }
-    #member-list td:first-child { white-space: nowrap; font-weight: 500; }
-    #member-list td:nth-child(2) { color: #6b7280; }
+    /* メンバー一覧テーブル */
+    #member-list table { width: 100%; table-layout: fixed; }
+    #member-list th:nth-child(1), #member-list td:nth-child(1) { width: 13%; }
+    #member-list th:nth-child(2), #member-list td:nth-child(2) { width: 10%; }
+    #member-list th:nth-child(3), #member-list td:nth-child(3) { width: 13%; }
+    #member-list th:nth-child(4), #member-list td:nth-child(4) { width: 15%; }
+    #member-list th:nth-child(5), #member-list td:nth-child(5) { width: 9%; }
+    #member-list th:nth-child(6), #member-list td:nth-child(6) { width: 13%; }
+    #member-list th:nth-child(7), #member-list td:nth-child(7) { width: 27%; }
+    #member-list td { padding: 8px 6px; }
+    #member-list select.btn-sm { width: 100%; max-width: none; font-size: 11px; padding: 3px 4px; }
+    #member-list td:first-child { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #member-list td:nth-child(2) { color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #member-list .td-actions { flex-wrap: wrap; gap: 4px; }
+    #member-list .td-actions .btn-sm { font-size: 11px; padding: 3px 6px; }
+    /* スマホは横スクロール維持 */
+    @media (max-width: 768px) {
+      #member-list { overflow-x: auto; }
+      #member-list table { min-width: 680px; table-layout: auto; }
+    }
     .pill { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; }
     .pill-blue { background: #eef0fa; color: #495e9f; }
     .pill-gray { background: #f0f4f8; color: #6b7280; }
