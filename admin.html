@@ -306,6 +306,21 @@
     </div>
   </div>
 
+  <!-- カテゴリ名編集モーダル -->
+  <div class="modal-overlay" id="edit-category-modal">
+    <div class="modal">
+      <h3>カテゴリ名を編集</h3>
+      <div class="modal-field">
+        <label>新しいカテゴリ名</label>
+        <input type="text" id="edit-category-name" placeholder="カテゴリ名を入力">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('edit-category-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveCategoryName()">保存する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- カテゴリ追加モーダル -->
   <div class="modal-overlay" id="add-category-modal">
     <div class="modal">
@@ -404,6 +419,36 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal('duplicate-category-modal')">キャンセル</button>
         <button class="btn btn-primary" onclick="duplicateCategory()">複製する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 事業部名編集モーダル（全権管理者のみ） -->
+  <div class="modal-overlay" id="edit-dept-modal">
+    <div class="modal">
+      <h3>事業部名を編集</h3>
+      <div class="modal-field">
+        <label>新しい事業部名</label>
+        <input type="text" id="edit-dept-name" placeholder="例：飲食事業部">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('edit-dept-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveDeptName()">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- エリア名編集モーダル（全権管理者のみ） -->
+  <div class="modal-overlay" id="edit-area-modal">
+    <div class="modal">
+      <h3>エリア名を編集</h3>
+      <div class="modal-field">
+        <label>新しいエリア名</label>
+        <input type="text" id="edit-area-name" placeholder="例：東京エリア">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('edit-area-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveAreaName()">保存する</button>
       </div>
     </div>
   </div>
@@ -1321,6 +1366,13 @@
 
     async function loadContent() {
       var list = document.getElementById('content-list');
+
+      // 再描画前に「閉じている」セクションIDを保存しておく
+      var closedIds = [];
+      list.querySelectorAll('[id^="content-dept-"], [id^="content-cat-"]').forEach(function(el) {
+        if (el.style.display === 'none') closedIds.push(el.id);
+      });
+
       list.innerHTML = '<div class="loading-text">読み込み中...</div>';
 
       // 部署を取得（dept_admin は自部署のみ）
@@ -1395,18 +1447,20 @@
                     '<button class="btn btn-secondary btn-sm" onclick="openAddStepModal(' + item.id + ')">＋ ステップ追加</button>' +
                   '</div>' +
                 '</td>' +
-                '<td><div class="td-actions">' +
-                  '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="openEditItemModal(' + item.id + ', \'' + item.name.replace(/'/g,"&#39;") + '\')">編集</button>' +
-                  '<button class="btn btn-sm" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" onclick="duplicateItem(' + item.id + ', \'' + item.name.replace(/'/g,"&#39;") + '\')">複製</button>' +
-                  '<button class="btn btn-danger btn-sm" onclick="deleteItem(' + item.id + ', \'' + item.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
+                '<td style="white-space:nowrap"><div class="td-actions" style="flex-wrap:nowrap">' +
+                  '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0;white-space:nowrap" onclick="openEditItemModal(' + item.id + ', \'' + item.name.replace(/'/g,"&#39;") + '\')">編集</button>' +
+                  '<button class="btn btn-sm" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;white-space:nowrap" onclick="duplicateItem(' + item.id + ', \'' + item.name.replace(/'/g,"&#39;") + '\')">複製</button>' +
+                  '<button class="btn btn-danger btn-sm" style="white-space:nowrap" onclick="deleteItem(' + item.id + ', \'' + item.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
                 '</div></td>' +
               '</tr>';
             }).join('');
 
             return '<div style="margin-bottom:8px;font-size:12px;font-weight:700;color:#6b7280;padding:4px 0 2px">' + grade + '等級</div>' +
-              '<table><thead><tr><th>項目名</th><th>対象等級</th><th>ステップ</th><th></th></tr></thead>' +
-                '<tbody>' + rows + '</tbody>' +
-              '</table>';
+              '<div style="overflow-x:auto">' +
+                '<table style="min-width:560px"><thead><tr><th>項目名</th><th>対象等級</th><th>ステップ</th><th style="white-space:nowrap;width:1%"></th></tr></thead>' +
+                  '<tbody>' + rows + '</tbody>' +
+                '</table>' +
+              '</div>';
           }).join('');
 
           var dupBtn = canDuplicate
@@ -1420,6 +1474,7 @@
                 '<h3>' + cat.name + '</h3>' +
               '</div>' +
               '<div style="display:flex;gap:6px" onclick="event.stopPropagation()">' +
+                '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="openEditCategoryModal(' + cat.id + ', \'' + cat.name.replace(/'/g,"&#39;") + '\')">編集</button>' +
                 dupBtn +
                 '<button class="btn btn-danger btn-sm" onclick="deleteCategory(' + cat.id + ', \'' + cat.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
               '</div>' +
@@ -1453,6 +1508,16 @@
       }).join('');
 
       list.innerHTML = html || '<div class="loading-text">カテゴリが登録されていません</div>';
+
+      // 再描画後に閉じていたセクションを復元
+      closedIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.style.display = 'none';
+          var arr = document.getElementById('arr-' + id);
+          if (arr) arr.classList.add('closed');
+        }
+      });
     }
 
     async function openAddCategoryModal() {
@@ -1573,6 +1638,27 @@
 
       closeModal('duplicate-category-modal');
       showToast(catName + ' を複製しました ✓');
+      loadContent();
+    }
+
+    // ============================================
+    // カテゴリ名編集
+    // ============================================
+    var editCategoryTargetId = null;
+
+    function openEditCategoryModal(catId, currentName) {
+      editCategoryTargetId = catId;
+      document.getElementById('edit-category-name').value = currentName;
+      document.getElementById('edit-category-modal').classList.add('show');
+    }
+
+    async function saveCategoryName() {
+      var newName = document.getElementById('edit-category-name').value.trim();
+      if (!newName) { alert('カテゴリ名を入力してください'); return; }
+      var { error } = await client.from('categories').update({ name: newName }).eq('id', editCategoryTargetId);
+      if (error) { alert('更新エラー：' + error.message); return; }
+      closeModal('edit-category-modal');
+      showToast('カテゴリ名を更新しました ✓');
       loadContent();
     }
 
@@ -1830,7 +1916,8 @@
                     area.name +
                     '<span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:4px">' + areaStores.length + '店舗</span>' +
                   '</h4>' +
-                  '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteArea(' + area.id + ', \'' + area.name + '\')">削除</button>' +
+                  (!isDeptAdmin ? '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="event.stopPropagation();openEditAreaModal(' + area.id + ', \'' + area.name.replace(/'/g,"&#39;") + '\')">編集</button>' : '') +
+                  '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteArea(' + area.id + ', \'' + area.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
                 '</div>' +
                 '<div id="' + areaBodyId + '" class="area-card-body" style="display:none">' +
                   '<table><thead><tr><th>店舗名</th><th></th></tr></thead>' +
@@ -1844,9 +1931,10 @@
             }).join('')
           : '<div style="font-size:13px;color:#9ca3af;padding:8px 0">エリアがありません</div>';
 
-        // dept_admin には部署の削除ボタンを表示しない
+        // dept_admin には部署の削除・編集ボタンを表示しない（全権管理者のみ）
         var deleteDeptBtn = isDeptAdmin ? '' :
-          '<button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4)" onclick="event.stopPropagation();deleteDept(' + dept.id + ', \'' + dept.name + '\')">削除</button>';
+          '<button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4)" onclick="event.stopPropagation();openEditDeptModal(' + dept.id + ', \'' + dept.name.replace(/'/g,"&#39;") + '\')">編集</button>' +
+          '<button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4)" onclick="event.stopPropagation();deleteDept(' + dept.id + ', \'' + dept.name.replace(/'/g,"&#39;") + '\')">削除</button>';
 
         return '<div class="dept-card">' +
           '<div class="dept-card-header toggle-btn" onclick="toggleSection(\'' + deptBodyId + '\')">' +
@@ -1890,6 +1978,44 @@
       if (error) { alert('追加エラー：' + error.message); return; }
       closeModal('add-dept-modal');
       showToast(name + ' を追加しました ✓');
+      loadOrg();
+    }
+
+    // ============================================
+    // 事業部名・エリア名編集（全権管理者のみ）
+    // ============================================
+    var editDeptTargetId = null;
+    var editAreaTargetId = null;
+
+    function openEditDeptModal(deptId, currentName) {
+      editDeptTargetId = deptId;
+      document.getElementById('edit-dept-name').value = currentName;
+      document.getElementById('edit-dept-modal').classList.add('show');
+    }
+
+    async function saveDeptName() {
+      var newName = document.getElementById('edit-dept-name').value.trim();
+      if (!newName) { alert('事業部名を入力してください'); return; }
+      var { error } = await client.from('departments').update({ name: newName }).eq('id', editDeptTargetId);
+      if (error) { alert('更新エラー：' + error.message); return; }
+      closeModal('edit-dept-modal');
+      showToast('事業部名を更新しました ✓');
+      loadOrg();
+    }
+
+    function openEditAreaModal(areaId, currentName) {
+      editAreaTargetId = areaId;
+      document.getElementById('edit-area-name').value = currentName;
+      document.getElementById('edit-area-modal').classList.add('show');
+    }
+
+    async function saveAreaName() {
+      var newName = document.getElementById('edit-area-name').value.trim();
+      if (!newName) { alert('エリア名を入力してください'); return; }
+      var { error } = await client.from('areas').update({ name: newName }).eq('id', editAreaTargetId);
+      if (error) { alert('更新エラー：' + error.message); return; }
+      closeModal('edit-area-modal');
+      showToast('エリア名を更新しました ✓');
       loadOrg();
     }
 
