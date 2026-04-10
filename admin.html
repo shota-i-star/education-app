@@ -1929,9 +1929,30 @@
 
       var reader = new FileReader();
       reader.onload = function(e) {
-        var text = e.target.result;
-        // BOM除去
-        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        var buffer = e.target.result;
+        var bytes  = new Uint8Array(buffer);
+        var text;
+
+        // BOM を確認してエンコーディングを自動判定
+        if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+          // UTF-8 BOM あり
+          text = new TextDecoder('utf-8').decode(buffer);
+          text = text.slice(1); // BOM文字を除去
+        } else if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+          // UTF-16 LE BOM（Windowsメモ帳保存など）
+          text = new TextDecoder('utf-16le').decode(buffer);
+        } else if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+          // UTF-16 BE BOM
+          text = new TextDecoder('utf-16be').decode(buffer);
+        } else {
+          // BOMなし → ExcelのShift-JIS保存に対応
+          try {
+            text = new TextDecoder('shift-jis').decode(buffer);
+          } catch(err) {
+            text = new TextDecoder('utf-8').decode(buffer);
+          }
+        }
+
         var lines = text.split(/\r?\n/).map(function(l) { return l.trim(); }).filter(function(l) { return l; });
         if (lines.length < 2) {
           document.getElementById('csv-preview-area').innerHTML = '<p style="color:#bd3c40;font-size:13px">データが見つかりません（ヘッダー行＋データ行が必要です）</p>';
@@ -1942,7 +1963,7 @@
         csvParsedData = lines.slice(1).map(parseCsvLine);
         showCsvPreview();
       };
-      reader.readAsText(file, 'UTF-8');
+      reader.readAsArrayBuffer(file); // バイナリで読み込んでエンコーディングを自判定
     }
 
     function parseCsvLine(line) {
