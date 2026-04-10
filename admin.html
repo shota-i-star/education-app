@@ -120,6 +120,19 @@
     /* トースト */
     .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; }
     .toast.show { opacity: 1; }
+
+    /* CSV一括追加モーダル */
+    .csv-modal { background: #fff; border-radius: 12px; padding: 28px; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; }
+    .csv-col-desc { background: #f0f4f8; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #374151; line-height: 1.6; margin-bottom: 14px; }
+    .csv-col-desc strong { color: #495e9f; }
+    .csv-preview-table { font-size: 12px; min-width: 100%; }
+    .csv-preview-table th { background: #f0f4f8; padding: 6px 10px; font-size: 11px; color: #6b7280; }
+    .csv-preview-table td { padding: 5px 10px; border-bottom: 1px solid #f0f4f8; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .csv-result-ok { color: #2e7d32; font-weight: 700; font-size: 14px; }
+    .csv-result-err { color: #bd3c40; font-size: 12px; margin-top: 4px; }
+    .file-pick-label { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #f0f4f8; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; font-size: 13px; color: #374151; transition: background 0.15s; }
+    .file-pick-label:hover { background: #e5eaf0; }
+    #csv-file-input { display: none; }
   </style>
 </head>
 <body>
@@ -161,8 +174,9 @@
         <div class="card">
           <div class="card-header">
             <h3>メンバー一覧</h3>
-            <div style="display:flex;gap:8px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-sm" style="background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9" onclick="exportMembersCSV()">📥 CSVエクスポート</button>
+              <button class="btn btn-sm" id="btn-csv-member" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0;display:none" onclick="openCsvModal('member')">📋 CSVで一括追加</button>
               <button class="btn btn-primary btn-sm" onclick="openAddModal()">＋ メンバーを追加</button>
             </div>
           </div>
@@ -203,7 +217,10 @@
         <h2>カテゴリ・項目管理</h2>
         <p class="page-desc">教育カテゴリと各項目を設定します。</p>
         <div id="content-list"><div class="loading-text">読み込み中...</div></div>
-        <button class="btn btn-primary" style="margin-top:4px" onclick="openAddCategoryModal()">＋ 新しいカテゴリを追加</button>
+        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="openAddCategoryModal()">＋ 新しいカテゴリを追加</button>
+          <button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="openCsvModal('category')">📋 CSVでカテゴリを一括追加</button>
+        </div>
       </div>
 
       <!-- テスト管理 -->
@@ -218,7 +235,10 @@
         <h2>部署・エリア・店舗管理</h2>
         <p class="page-desc">部署・エリア・所属店舗を設定します。</p>
         <div id="org-list"><div class="loading-text">読み込み中...</div></div>
-        <button class="btn btn-primary" id="btn-add-dept" style="margin-top:4px" onclick="openAddDeptModal()">＋ 新しい部署を追加</button>
+        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="btn-add-dept" onclick="openAddDeptModal()">＋ 新しい部署を追加</button>
+          <button class="btn btn-sm" id="btn-csv-store" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="openCsvModal('store')">📋 CSVで店舗を一括追加</button>
+        </div>
       </div>
 
     </div>
@@ -545,6 +565,41 @@
     </div>
   </div>
 
+  <!-- CSV一括追加モーダル（メンバー / カテゴリ / 店舗 共用） -->
+  <div class="modal-overlay" id="csv-import-modal">
+    <div class="csv-modal">
+      <h3 id="csv-modal-title" style="font-size:16px;font-weight:700;margin-bottom:16px">CSVで一括追加</h3>
+
+      <!-- 列説明 -->
+      <div class="csv-col-desc" id="csv-col-desc"></div>
+
+      <!-- ファイル選択 -->
+      <div style="margin-bottom:14px">
+        <label class="file-pick-label" for="csv-file-input">
+          📂 CSVファイルを選択
+        </label>
+        <input type="file" id="csv-file-input" accept=".csv" onchange="parseCsvFile()">
+        <span id="csv-file-name" style="font-size:12px;color:#9ca3af;margin-left:10px"></span>
+      </div>
+
+      <!-- プレビュー -->
+      <div id="csv-preview-area" style="display:none;margin-bottom:14px">
+        <div style="overflow-x:auto;max-height:260px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px">
+          <table class="csv-preview-table" id="csv-preview-table"></table>
+        </div>
+        <p id="csv-count-text" style="font-size:12px;color:#6b7280;margin-top:6px"></p>
+      </div>
+
+      <!-- 結果 -->
+      <div id="csv-result-area" style="display:none;margin-bottom:14px;padding:12px 16px;background:#f9fafb;border-radius:8px"></div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeCsvModal()">閉じる</button>
+        <button class="btn btn-primary" id="csv-import-btn" onclick="startCsvImport()" style="display:none">追加する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ★変更：メンバー追加モーダル（役割に dept_admin 追加・部署選択欄追加） -->
   <div class="modal-overlay" id="add-modal">
     <div class="modal">
@@ -681,10 +736,18 @@
         if (managerAdminOpt) managerAdminOpt.style.display = 'none';
       }
 
-      // dept_admin には「新しい部署を追加」ボタンを非表示にする（他部署の追加は不可）
+      // dept_admin には「新しい部署を追加」ボタン・「CSVで店舗一括追加」を非表示にする
       if (currentRole === 'dept_admin') {
         var btnAddDept = document.getElementById('btn-add-dept');
         if (btnAddDept) btnAddDept.style.display = 'none';
+        var btnCsvStore = document.getElementById('btn-csv-store');
+        if (btnCsvStore) btnCsvStore.style.display = 'none';
+      }
+
+      // manager_admin のみメンバーCSV一括追加ボタンを表示（adminClient が必要）
+      if (currentRole === 'manager_admin') {
+        var btnCsvMember = document.getElementById('btn-csv-member');
+        if (btnCsvMember) btnCsvMember.style.display = '';
       }
 
       loadMembers();
@@ -1796,6 +1859,230 @@
     // 部署・エリア・店舗管理
     // ============================================
     var currentAreaId = null; // 店舗追加時に使うエリアID
+
+    // ============================================
+    // CSV一括追加（メンバー / カテゴリ / 店舗 共用）
+    // ============================================
+    var csvImportType = null;
+    var csvParsedData = [];
+    var csvDepts = [];
+    var csvAreas = [];
+
+    async function openCsvModal(type) {
+      csvImportType = type;
+      csvParsedData = [];
+
+      // 部署・エリアのマスタを事前取得
+      var { data: depts } = await client.from('departments').select('id, name').order('id');
+      csvDepts = depts || [];
+      var { data: areas } = await client.from('areas').select('id, name').order('id');
+      csvAreas = areas || [];
+
+      // モーダルをリセット
+      document.getElementById('csv-file-input').value = '';
+      document.getElementById('csv-file-name').textContent = '';
+      document.getElementById('csv-preview-area').style.display = 'none';
+      document.getElementById('csv-result-area').style.display = 'none';
+      document.getElementById('csv-import-btn').style.display = 'none';
+
+      var titles = {
+        member:   'メンバーをCSVで一括追加',
+        category: 'カテゴリをCSVで一括追加',
+        store:    '店舗をCSVで一括追加'
+      };
+      document.getElementById('csv-modal-title').textContent = titles[type];
+
+      var descs = {
+        member:
+          '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
+          '① 名前　② 社員番号　③ パスワード　④ 役割（member / manager / dept_admin）　⑤ 等級（0〜5）　⑥ 部署名　⑦ 店舗名（任意）　⑧ エリア名（任意）',
+        category:
+          '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
+          '① カテゴリ名　② 部署名',
+        store:
+          '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
+          '① 店舗名　② エリア名'
+      };
+      document.getElementById('csv-col-desc').innerHTML = descs[type];
+
+      document.getElementById('csv-import-modal').classList.add('show');
+    }
+
+    function closeCsvModal() {
+      closeModal('csv-import-modal');
+    }
+
+    function parseCsvFile() {
+      var input = document.getElementById('csv-file-input');
+      var file = input.files[0];
+      if (!file) return;
+      document.getElementById('csv-file-name').textContent = file.name;
+      document.getElementById('csv-result-area').style.display = 'none';
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var text = e.target.result;
+        // BOM除去
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        var lines = text.split(/\r?\n/).map(function(l) { return l.trim(); }).filter(function(l) { return l; });
+        if (lines.length < 2) {
+          document.getElementById('csv-preview-area').innerHTML = '<p style="color:#bd3c40;font-size:13px">データが見つかりません（ヘッダー行＋データ行が必要です）</p>';
+          document.getElementById('csv-preview-area').style.display = 'block';
+          document.getElementById('csv-import-btn').style.display = 'none';
+          return;
+        }
+        csvParsedData = lines.slice(1).map(parseCsvLine);
+        showCsvPreview();
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    function parseCsvLine(line) {
+      var result = [], current = '', inQuotes = false;
+      for (var i = 0; i < line.length; i++) {
+        var c = line[i];
+        if (c === '"' && !inQuotes) { inQuotes = true; }
+        else if (c === '"' && inQuotes) { inQuotes = false; }
+        else if (c === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+        else { current += c; }
+      }
+      result.push(current.trim());
+      return result;
+    }
+
+    function showCsvPreview() {
+      var headers, rows;
+      if (csvImportType === 'member') {
+        headers = ['名前', '社員番号', 'PW', '役割', '等級', '部署', '店舗', 'エリア'];
+        rows = csvParsedData.map(function(r) {
+          return [r[0]||'', r[1]||'', r[2] ? '●（入力済）' : '—', r[3]||'member', r[4]||'0', r[5]||'', r[6]||'', r[7]||''];
+        });
+      } else if (csvImportType === 'category') {
+        headers = ['カテゴリ名', '部署名'];
+        rows = csvParsedData.map(function(r) { return [r[0]||'', r[1]||'']; });
+      } else {
+        headers = ['店舗名', 'エリア名'];
+        rows = csvParsedData.map(function(r) { return [r[0]||'', r[1]||'']; });
+      }
+
+      var thead = '<thead><tr>' + headers.map(function(h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead>';
+      var tbody = '<tbody>' + rows.map(function(r) {
+        return '<tr>' + r.map(function(c) { return '<td title="' + c.replace(/"/g,'&quot;') + '">' + (c || '—') + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody>';
+
+      document.getElementById('csv-preview-table').innerHTML = thead + tbody;
+      document.getElementById('csv-count-text').textContent = csvParsedData.length + ' 件のデータを読み込みました。内容を確認してから「追加する」を押してください。';
+      document.getElementById('csv-preview-area').style.display = 'block';
+      document.getElementById('csv-import-btn').style.display = '';
+    }
+
+    async function startCsvImport() {
+      var btn = document.getElementById('csv-import-btn');
+      btn.disabled = true;
+      btn.textContent = '追加中...';
+      var resultArea = document.getElementById('csv-result-area');
+      resultArea.innerHTML = '<p style="color:#6b7280;font-size:13px">追加しています...</p>';
+      resultArea.style.display = 'block';
+
+      var successCount = 0;
+      var errors = [];
+
+      if (csvImportType === 'member') {
+        for (var i = 0; i < csvParsedData.length; i++) {
+          var r = csvParsedData[i];
+          var name = (r[0]||'').trim(), eid = (r[1]||'').trim(), pw = (r[2]||'').trim();
+          var role = (r[3]||'member').trim(), grade = parseInt(r[4])||0;
+          var deptName = (r[5]||'').trim(), storeName = (r[6]||'').trim(), areaName = (r[7]||'').trim();
+
+          if (!name || !eid || !pw) { errors.push((i+1) + '行目：名前・社員番号・パスワードは必須です'); continue; }
+          var dept = csvDepts.find(function(d) { return d.name === deptName; });
+          if (!dept) { errors.push((i+1) + '行目：部署「' + deptName + '」が見つかりません'); continue; }
+
+          var { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+            email: eid + '@education-app.com', password: pw, email_confirm: true
+          });
+          if (authError) { errors.push((i+1) + '行目（' + name + '）：' + authError.message); continue; }
+
+          var { error: profErr } = await client.from('user_profiles').insert({
+            id: authData.user.id, employee_id: eid, name: name, role: role, grade: grade,
+            store: storeName || null, area: areaName || null, department_id: dept.id
+          });
+          if (profErr) { errors.push((i+1) + '行目（' + name + '）：' + profErr.message); continue; }
+          successCount++;
+        }
+
+      } else if (csvImportType === 'category') {
+        for (var i = 0; i < csvParsedData.length; i++) {
+          var r = csvParsedData[i];
+          var name = (r[0]||'').trim(), deptName = (r[1]||'').trim();
+          if (!name) { errors.push((i+1) + '行目：カテゴリ名は必須です'); continue; }
+
+          // dept_admin は自部署固定、manager_admin は CSV の部署名を使用
+          var deptId;
+          if (currentRole === 'dept_admin') {
+            deptId = currentDeptId;
+          } else {
+            var dept = csvDepts.find(function(d) { return d.name === deptName; });
+            if (!dept) { errors.push((i+1) + '行目：部署「' + deptName + '」が見つかりません'); continue; }
+            deptId = dept.id;
+          }
+
+          var { data: catData, error: catError } = await client
+            .from('categories').insert({ name: name, department_id: deptId }).select().limit(1);
+          if (catError) { errors.push((i+1) + '行目（' + name + '）：' + catError.message); continue; }
+
+          var catId = (catData && catData.length > 0) ? catData[0].id : null;
+          if (!catId) {
+            var { data: fetched } = await client.from('categories').select('id')
+              .eq('name', name).eq('department_id', deptId).order('id', { ascending: false }).limit(1);
+            catId = fetched && fetched[0] ? fetched[0].id : null;
+          }
+          if (!catId) { errors.push((i+1) + '行目：カテゴリIDの取得に失敗しました'); continue; }
+
+          var { error: linkErr } = await client.from('category_departments').insert({ category_id: catId, department_id: deptId });
+          if (linkErr) { errors.push((i+1) + '行目（' + name + '）：' + linkErr.message); continue; }
+          successCount++;
+        }
+
+      } else if (csvImportType === 'store') {
+        for (var i = 0; i < csvParsedData.length; i++) {
+          var r = csvParsedData[i];
+          var name = (r[0]||'').trim(), areaName = (r[1]||'').trim();
+          if (!name || !areaName) { errors.push((i+1) + '行目：店舗名・エリア名は必須です'); continue; }
+
+          var area = csvAreas.find(function(a) { return a.name === areaName; });
+          if (!area) { errors.push((i+1) + '行目：エリア「' + areaName + '」が見つかりません'); continue; }
+
+          var { error } = await client.from('stores').insert({ name: name, area_id: area.id });
+          if (error) { errors.push((i+1) + '行目（' + name + '）：' + error.message); continue; }
+          successCount++;
+        }
+      }
+
+      // 結果表示
+      var html = '';
+      if (successCount > 0) {
+        html += '<p class="csv-result-ok">✅ ' + successCount + ' 件を追加しました</p>';
+      }
+      if (errors.length > 0) {
+        html += '<p style="color:#bd3c40;font-weight:700;margin-top:8px">⚠️ エラー（' + errors.length + '件）</p>';
+        html += '<ul style="margin:4px 0 0 16px">' + errors.map(function(e) {
+          return '<li class="csv-result-err">' + e + '</li>';
+        }).join('') + '</ul>';
+      }
+      resultArea.innerHTML = html;
+
+      btn.disabled = false;
+      btn.textContent = '追加する';
+      document.getElementById('csv-import-btn').style.display = 'none';
+
+      // 画面を更新
+      if (successCount > 0) {
+        if (csvImportType === 'member')   loadMembers();
+        if (csvImportType === 'category') loadContent();
+        if (csvImportType === 'store')    loadOrg();
+      }
+    }
 
     // 部署→エリア→店舗の3階層で表示する
     async function loadOrg() {
