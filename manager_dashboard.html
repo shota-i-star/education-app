@@ -84,6 +84,12 @@
     .sub-table td:first-child { padding-left: 32px; }
     .sub-table tr:last-child td { border-bottom: none; }
     .sub-table tr:hover td { background: #eef0fa; }
+
+    /* 2軸進捗バー */
+    .dual-progress { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+    .dual-progress-row { display: flex; align-items: center; gap: 6px; }
+    .dual-label { font-size: 10px; color: #9ca3af; white-space: nowrap; width: 34px; flex-shrink: 0; text-align: right; }
+    .mini-bar-fill-gray { background: #b0b8c8; border-radius: 99px; height: 6px; }
   </style>
 </head>
 <body>
@@ -116,9 +122,9 @@
         <div class="s-sub">ロール：member</div>
       </div>
       <div class="summary-card">
-        <div class="s-label">平均進捗率</div>
+        <div class="s-label">平均進捗率（現等級）</div>
         <div class="s-value" id="s-progress">－ <span>%</span></div>
-        <div class="s-sub">全チェック項目の平均</div>
+        <div class="s-sub">各メンバーの現在等級の平均</div>
       </div>
       <div class="summary-card">
         <div class="s-label">テスト平均点</div>
@@ -301,7 +307,7 @@
     // ============================================
     async function loadDashboard() {
       // メンバー取得クエリを組み立てる（dept_admin の場合は自部署に絞り込む）
-      var membersQuery = client.from('user_profiles').select('id, name, grade, store, area').eq('role', 'member');
+      var membersQuery = client.from('user_profiles').select('id, name, grade, store, area, department_id').eq('role', 'member');
 
       if (currentRole === 'dept_admin' && currentDeptId) {
         // ステップ1: 自部署に所属するエリアのIDを取得
@@ -337,23 +343,37 @@
       // 昇級申請フィルタ用に取得したメンバーIDを保持する
       allowedMemberIds = members.map(function(m) { return m.id; });
 
-      var { data: items }  = await client.from('check_items').select('id, grade');
-      var { data: steps }  = await client.from('check_steps').select('id, item_id');
-      var { data: checks } = await client.from('check_progress').select('user_id, step_id').not('step_id', 'is', null);
-      var { data: results } = await client.from('test_results').select('user_id, score, passed').order('taken_at', { ascending: false });
+      var { data: items }    = await client.from('check_items').select('id, grade, category_id');
+      var { data: steps }    = await client.from('check_steps').select('id, item_id');
+      var { data: checks }   = await client.from('check_progress').select('user_id, step_id').not('step_id', 'is', null);
+      var { data: catDepts } = await client.from('category_departments').select('category_id, department_id');
+      var { data: results }    = await client.from('test_results').select('user_id, score, passed').order('taken_at', { ascending: false });
       var { data: textScores } = await client.from('text_answers').select('user_id, score').not('score', 'is', null);
 
       var memberData = members.map(function(m) {
+        // ── 現等級進捗率 ──────────────────────────────
         var gradeItems   = (items || []).filter(function(i) { return i.grade === m.grade; });
         var gradeStepIds = (steps || [])
           .filter(function(s) { return gradeItems.some(function(i) { return i.id === s.item_id; }); })
           .map(function(s) { return s.id; });
-
-        var checkedCount = (checks || []).filter(function(c) {
+        var checkedGrade = (checks || []).filter(function(c) {
           return c.user_id === m.id && gradeStepIds.indexOf(c.step_id) !== -1;
         }).length;
+        var progress = gradeStepIds.length > 0 ? Math.round(checkedGrade / gradeStepIds.length * 100) : 0;
 
-        var progress = gradeStepIds.length > 0 ? Math.round(checkedCount / gradeStepIds.length * 100) : 0;
+        // ── 全体進捗率（その部署の全カテゴリ・全等級のステップ） ──
+        var deptCatIds    = (catDepts || [])
+          .filter(function(cd) { return cd.department_id === m.department_id; })
+          .map(function(cd) { return cd.category_id; });
+        var allDeptItems  = (items || []).filter(function(i) { return deptCatIds.indexOf(i.category_id) !== -1; });
+        var allDeptStepIds = (steps || [])
+          .filter(function(s) { return allDeptItems.some(function(i) { return i.id === s.item_id; }); })
+          .map(function(s) { return s.id; });
+        var checkedAll = (checks || []).filter(function(c) {
+          return c.user_id === m.id && allDeptStepIds.indexOf(c.step_id) !== -1;
+        }).length;
+        var progressAll = allDeptStepIds.length > 0 ? Math.round(checkedAll / allDeptStepIds.length * 100) : 0;
+
         var latestResult = (results || []).find(function(r) { return r.user_id === m.id; });
         var textScore    = (textScores || []).find(function(t) { return t.user_id === m.id; });
         var autoScore    = latestResult ? latestResult.score : null;
@@ -363,7 +383,8 @@
 
         return { id: m.id, name: m.name, grade: m.grade,
           store: m.store || '未設定', area: m.area || '未設定',
-          progress: progress, score: totalScore, passed: passed };
+          progress: progress, progressAll: progressAll,
+          score: totalScore, passed: passed };
       });
 
       renderMemberTable(memberData);
@@ -371,6 +392,24 @@
       renderStoreTable(memberData);
       renderSummary(memberData);
       renderCharts(memberData);
+    }
+
+    // ============================================
+    // 2軸進捗バー HTML を生成
+    // ============================================
+    function dualProgressCell(progressAll, progressGrade) {
+      return '<div class="dual-progress">' +
+        '<div class="dual-progress-row">' +
+          '<span class="dual-label">全体</span>' +
+          '<div class="mini-bar-bg"><div class="mini-bar-fill mini-bar-fill-gray" style="width:' + progressAll + '%"></div></div>' +
+          '<span class="progress-num">' + progressAll + '%</span>' +
+        '</div>' +
+        '<div class="dual-progress-row">' +
+          '<span class="dual-label">現等級</span>' +
+          '<div class="mini-bar-bg"><div class="mini-bar-fill" style="width:' + progressGrade + '%"></div></div>' +
+          '<span class="progress-num">' + progressGrade + '%</span>' +
+        '</div>' +
+      '</div>';
     }
 
     // ============================================
@@ -389,13 +428,13 @@
           '<td><span class="area-tag">' + m.area + '</span></td>' +
           '<td><span class="store-tag">' + m.store + '</span></td>' +
           '<td><span class="grade-pill">' + m.grade + '等級</span></td>' +
-          '<td><div class="progress-cell"><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:' + m.progress + '%"></div></div><span class="progress-num">' + m.progress + '%</span></div></td>' +
+          '<td>' + dualProgressCell(m.progressAll, m.progress) + '</td>' +
           '<td>' + scoreText + '</td><td>' + passText + '</td>' +
           '<td><button class="btn-detail" onclick="openDetail(\'' + m.id + '\')">詳細</button></td>' +
         '</tr>';
       }).join('');
       document.getElementById('member-table-body').innerHTML =
-        '<table><thead><tr><th>名前</th><th>エリア</th><th>店舗</th><th>等級</th><th>進捗率</th><th>テスト点数</th><th>合否</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+        '<table><thead><tr><th>名前</th><th>エリア</th><th>店舗</th><th>等級</th><th>進捗率（全体 / 現等級）</th><th>テスト点数</th><th>合否</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
     }
 
     // クリックで展開・折りたたむユーティリティ
@@ -424,14 +463,14 @@
         return '<tr>' +
           '<td>' + m.name + '</td>' +
           '<td><span class="grade-pill">' + m.grade + '等級</span></td>' +
-          '<td><div class="progress-cell"><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:' + m.progress + '%"></div></div><span class="progress-num">' + m.progress + '%</span></div></td>' +
+          '<td>' + dualProgressCell(m.progressAll, m.progress) + '</td>' +
           '<td>' + scoreText + '</td>' +
           '<td>' + passText + '</td>' +
           '<td><button class="btn-detail" onclick="event.stopPropagation();openDetail(\'' + m.id + '\')">詳細</button></td>' +
         '</tr>';
       }).join('');
       return '<table class="sub-table">' +
-        '<thead><tr><th>名前</th><th>等級</th><th>進捗率</th><th>テスト点数</th><th>合否</th><th></th></tr></thead>' +
+        '<thead><tr><th>名前</th><th>等級</th><th>進捗率（全体 / 現等級）</th><th>テスト点数</th><th>合否</th><th></th></tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
       '</table>';
     }
@@ -445,19 +484,20 @@
       });
       var idx = 0;
       var rows = Object.keys(areaMap).map(function(area) {
-        var ms     = areaMap[area];
-        var avgP   = Math.round(ms.reduce(function(s,m){return s+m.progress;},0)/ms.length);
-        var tested = ms.filter(function(m){return m.score!==null;});
-        var avgS   = tested.length>0 ? Math.round(tested.reduce(function(s,m){return s+m.score;},0)/tested.length) : null;
-        var failed = ms.filter(function(m){return m.passed===false;}).length;
-        var storeSet = {};
+        var ms        = areaMap[area];
+        var avgP      = Math.round(ms.reduce(function(s,m){return s+m.progress;},0)/ms.length);
+        var avgPAll   = Math.round(ms.reduce(function(s,m){return s+(m.progressAll||0);},0)/ms.length);
+        var tested    = ms.filter(function(m){return m.score!==null;});
+        var avgS      = tested.length>0 ? Math.round(tested.reduce(function(s,m){return s+m.score;},0)/tested.length) : null;
+        var failed    = ms.filter(function(m){return m.passed===false;}).length;
+        var storeSet  = {};
         ms.forEach(function(m){ storeSet[m.store||'未設定']=true; });
         var rowId = 'area-sub-' + (idx++);
         return '<tr class="expandable-row" onclick="toggleExpand(\'' + rowId + '\')">' +
           '<td><span class="area-tag">' + area + '</span><span class="expand-arrow" id="arr-' + rowId + '">▾</span></td>' +
           '<td>' + Object.keys(storeSet).length + '店舗</td>' +
           '<td>' + ms.length + '名</td>' +
-          '<td><div class="progress-cell"><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:' + avgP + '%"></div></div><span class="progress-num">' + avgP + '%</span></div></td>' +
+          '<td>' + dualProgressCell(avgPAll, avgP) + '</td>' +
           '<td>' + (avgS!==null?avgS+'点':'未受験') + '</td>' +
           '<td class="' + (failed>0?'fail':'pass') + '">' + failed + '名</td>' +
         '</tr>' +
@@ -466,7 +506,7 @@
         '</td></tr>';
       }).join('');
       document.getElementById('area-table-body').innerHTML =
-        '<table><thead><tr><th>エリア</th><th>店舗数</th><th>メンバー数</th><th>平均進捗率</th><th>テスト平均点</th><th>未合格者</th></tr></thead><tbody>' + rows + '</tbody></table>';
+        '<table><thead><tr><th>エリア</th><th>店舗数</th><th>メンバー数</th><th>平均進捗率（全体 / 現等級）</th><th>テスト平均点</th><th>未合格者</th></tr></thead><tbody>' + rows + '</tbody></table>';
     }
 
     function renderStoreTable(memberData) {
@@ -478,18 +518,19 @@
       });
       var idx = 0;
       var rows = Object.keys(storeMap).map(function(store) {
-        var ms   = storeMap[store].members;
-        var area = storeMap[store].area || '未設定';
-        var avgP   = Math.round(ms.reduce(function(s,m){return s+m.progress;},0)/ms.length);
-        var tested = ms.filter(function(m){return m.score!==null;});
-        var avgS   = tested.length>0 ? Math.round(tested.reduce(function(s,m){return s+m.score;},0)/tested.length) : null;
-        var failed = ms.filter(function(m){return m.passed===false;}).length;
-        var rowId  = 'store-sub-' + (idx++);
+        var ms     = storeMap[store].members;
+        var area   = storeMap[store].area || '未設定';
+        var avgP    = Math.round(ms.reduce(function(s,m){return s+m.progress;},0)/ms.length);
+        var avgPAll = Math.round(ms.reduce(function(s,m){return s+(m.progressAll||0);},0)/ms.length);
+        var tested  = ms.filter(function(m){return m.score!==null;});
+        var avgS    = tested.length>0 ? Math.round(tested.reduce(function(s,m){return s+m.score;},0)/tested.length) : null;
+        var failed  = ms.filter(function(m){return m.passed===false;}).length;
+        var rowId   = 'store-sub-' + (idx++);
         return '<tr class="expandable-row" onclick="toggleExpand(\'' + rowId + '\')">' +
           '<td><span class="area-tag">' + area + '</span></td>' +
           '<td><span class="store-tag">' + store + '</span><span class="expand-arrow" id="arr-' + rowId + '">▾</span></td>' +
           '<td>' + ms.length + '名</td>' +
-          '<td><div class="progress-cell"><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:' + avgP + '%"></div></div><span class="progress-num">' + avgP + '%</span></div></td>' +
+          '<td>' + dualProgressCell(avgPAll, avgP) + '</td>' +
           '<td>' + (avgS!==null?avgS+'点':'未受験') + '</td>' +
           '<td class="' + (failed>0?'fail':'pass') + '">' + failed + '名</td>' +
         '</tr>' +
@@ -498,7 +539,7 @@
         '</td></tr>';
       }).join('');
       document.getElementById('store-table-body').innerHTML =
-        '<table><thead><tr><th>エリア</th><th>店舗</th><th>メンバー数</th><th>平均進捗率</th><th>テスト平均点</th><th>未合格者</th></tr></thead><tbody>' + rows + '</tbody></table>';
+        '<table><thead><tr><th>エリア</th><th>店舗</th><th>メンバー数</th><th>平均進捗率（全体 / 現等級）</th><th>テスト平均点</th><th>未合格者</th></tr></thead><tbody>' + rows + '</tbody></table>';
     }
 
     function renderSummary(memberData) {
