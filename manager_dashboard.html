@@ -149,14 +149,15 @@
       <div class="chart-card"><h2>店舗別 平均進捗率</h2><canvas id="chart-store"></canvas></div>
     </div>
 
-    <!-- メンバー一覧 -->
+    <!-- 進捗率 -->
     <div class="table-card">
       <div class="table-header">
-        <h2>メンバー一覧</h2>
+        <h2>進捗率</h2>
         <div style="display:flex;gap:8px;align-items:center;">
           <div class="view-tabs">
             <button class="tab-btn" onclick="setTab(this,'area')">エリア別</button>
             <button class="tab-btn" onclick="setTab(this,'store')">店舗別</button>
+            <button class="tab-btn" onclick="setTab(this,'grade')">等級別</button>
             <button class="tab-btn active" onclick="setTab(this,'member')">個人別</button>
           </div>
           <span class="selected-summary" id="tab-summary">読み込み中...</span>
@@ -164,6 +165,7 @@
       </div>
       <div id="table-area" style="display:none"><div id="area-table-body"><div class="loading-text">読み込み中...</div></div></div>
       <div id="table-store" style="display:none"><div id="store-table-body"><div class="loading-text">読み込み中...</div></div></div>
+      <div id="table-grade" style="display:none"><div id="grade-table-body"><div class="loading-text">読み込み中...</div></div></div>
       <div id="table-member"><div id="member-table-body"><div class="loading-text">読み込み中...</div></div></div>
     </div>
   </main>
@@ -322,7 +324,7 @@
         if (deptAreaIds.length === 0) {
           // 対象エリアがなければ空で表示して終了
           allowedMemberIds = [];
-          renderMemberTable([]); renderAreaTable([]); renderStoreTable([]); renderSummary([]); renderCharts([]);
+          renderMemberTable([]); renderAreaTable([]); renderStoreTable([]); renderGradeTable([]); renderSummary([]); renderCharts([]);
           return;
         }
 
@@ -333,7 +335,7 @@
         if (deptStoreNames.length === 0) {
           // 対象店舗がなければ空で表示して終了
           allowedMemberIds = [];
-          renderMemberTable([]); renderAreaTable([]); renderStoreTable([]); renderSummary([]); renderCharts([]);
+          renderMemberTable([]); renderAreaTable([]); renderStoreTable([]); renderGradeTable([]); renderSummary([]); renderCharts([]);
           return;
         }
 
@@ -395,6 +397,7 @@
       renderMemberTable(memberData);
       renderAreaTable(memberData);
       renderStoreTable(memberData);
+      renderGradeTable(memberData);
       renderSummary(memberData);
       renderCharts(memberData);
     }
@@ -547,6 +550,67 @@
         '<table><thead><tr><th>エリア</th><th>店舗</th><th>メンバー数</th><th>平均進捗率（全体 / 現等級）</th><th>テスト平均点</th><th>未合格者</th></tr></thead><tbody>' + rows + '</tbody></table>';
     }
 
+    function renderGradeTable(memberData) {
+      if (memberData.length === 0) {
+        document.getElementById('grade-table-body').innerHTML = '<div class="loading-text">メンバーが登録されていません</div>';
+        return;
+      }
+      var gradeMap = {};
+      memberData.forEach(function(m) {
+        var g = m.grade != null ? m.grade : '未設定';
+        if (!gradeMap[g]) gradeMap[g] = [];
+        gradeMap[g].push(m);
+      });
+      var grades = Object.keys(gradeMap).sort(function(a, b) { return Number(a) - Number(b); });
+      var idx = 0;
+      var rows = grades.map(function(grade) {
+        var ms      = gradeMap[grade];
+        var avgP    = Math.round(ms.reduce(function(s,m){return s+m.progress;},0)/ms.length);
+        var avgPAll = Math.round(ms.reduce(function(s,m){return s+(m.progressAll||0);},0)/ms.length);
+        var tested  = ms.filter(function(m){return m.score!==null;});
+        var avgS    = tested.length>0 ? Math.round(tested.reduce(function(s,m){return s+m.score;},0)/tested.length) : null;
+        var failed  = ms.filter(function(m){return m.passed===false;}).length;
+        var rowId   = 'grade-sub-' + (idx++);
+        return '<tr class="expandable-row" onclick="toggleExpand(\'' + rowId + '\')">' +
+          '<td><span class="grade-pill">' + grade + '等級</span><span class="expand-arrow" id="arr-' + rowId + '">▾</span></td>' +
+          '<td>' + ms.length + '名</td>' +
+          '<td>' + dualProgressCell(avgPAll, avgP) + '</td>' +
+          '<td>' + (avgS!==null?avgS+'点':'未受験') + '</td>' +
+          '<td class="' + (failed>0?'fail':'pass') + '">' + failed + '名</td>' +
+        '</tr>' +
+        '<tr id="' + rowId + '" class="sub-member-row"><td colspan="5">' +
+          renderGradeSubTable(ms) +
+        '</td></tr>';
+      }).join('');
+      document.getElementById('grade-table-body').innerHTML =
+        '<table><thead><tr><th>等級</th><th>メンバー数</th><th>平均進捗率（全体 / 現等級）</th><th>テスト平均点</th><th>未合格者</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
+
+    function renderGradeSubTable(members) {
+      if (!members || members.length === 0) {
+        return '<div style="padding:12px 32px;color:#9ca3af;font-size:13px">メンバーがいません</div>';
+      }
+      var rows = members.map(function(m) {
+        var scoreText = m.score !== null ? m.score + '点' : '未受験';
+        var passText  = m.passed === null ? '－'
+          : m.passed ? '<span class="pass">合格</span>'
+                     : '<span class="fail">未合格</span>';
+        return '<tr>' +
+          '<td>' + m.name + '</td>' +
+          '<td><span class="area-tag">' + m.area + '</span></td>' +
+          '<td><span class="store-tag">' + m.store + '</span></td>' +
+          '<td>' + dualProgressCell(m.progressAll, m.progress) + '</td>' +
+          '<td>' + scoreText + '</td>' +
+          '<td>' + passText + '</td>' +
+          '<td><button class="btn-detail" onclick="event.stopPropagation();openDetail(\'' + m.id + '\')">詳細</button></td>' +
+        '</tr>';
+      }).join('');
+      return '<table class="sub-table">' +
+        '<thead><tr><th>名前</th><th>エリア</th><th>店舗</th><th>進捗率（全体 / 現等級）</th><th>テスト点数</th><th>合否</th><th></th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+        '</table>';
+    }
+
     function renderSummary(memberData) {
       var total = memberData.length;
       var avgProgress    = total > 0 ? Math.round(memberData.reduce(function(s,m){return s+m.progress;},0)/total) : 0;
@@ -570,6 +634,7 @@
       btn.classList.add('active');
       document.getElementById('table-area').style.display   = type==='area'   ? 'block' : 'none';
       document.getElementById('table-store').style.display  = type==='store'  ? 'block' : 'none';
+      document.getElementById('table-grade').style.display  = type==='grade'  ? 'block' : 'none';
       document.getElementById('table-member').style.display = type==='member' ? 'block' : 'none';
     }
 
