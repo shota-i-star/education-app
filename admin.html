@@ -521,60 +521,26 @@
     </div>
   </div>
 
-  <!-- メンバー名前編集モーダル（部署管理者・全権管理者） -->
-  <div class="modal-overlay" id="edit-member-name-modal">
+  <!-- メンバー編集モーダル（部署管理者：名前のみ / 全権管理者：名前・社員番号・PW） -->
+  <div class="modal-overlay" id="edit-member-modal">
     <div class="modal">
-      <h3>名前を変更</h3>
+      <h3>メンバーを編集</h3>
       <div class="modal-field">
-        <label>対象メンバー</label>
-        <div id="edit-member-name-target" style="font-size:14px;font-weight:700;color:#1a1a2e;padding:6px 0"></div>
+        <label>名前</label>
+        <input type="text" id="edit-member-name" placeholder="例：山田 太郎">
       </div>
-      <div class="modal-field">
-        <label>新しい名前</label>
-        <input type="text" id="edit-member-name-value" placeholder="例：山田 太郎">
+      <div class="modal-field" id="edit-member-eid-field">
+        <label>社員番号</label>
+        <input type="text" id="edit-member-eid" placeholder="例：10007">
+        <p style="font-size:12px;color:#9ca3af;margin-top:4px">※ ログイン時の社員番号も変更されます</p>
+      </div>
+      <div class="modal-field" id="edit-member-pw-field">
+        <label>新しいパスワード <span style="font-size:11px;font-weight:400;color:#9ca3af">（変更しない場合は空欄）</span></label>
+        <input type="password" id="edit-member-pw" placeholder="変更する場合のみ入力">
       </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="closeModal('edit-member-name-modal')">キャンセル</button>
-        <button class="btn btn-primary" onclick="saveMemberName()">変更する</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 社員番号変更モーダル（全権管理者のみ） -->
-  <div class="modal-overlay" id="change-employee-id-modal">
-    <div class="modal">
-      <h3>社員番号を変更</h3>
-      <div class="modal-field">
-        <label>対象メンバー</label>
-        <div id="change-eid-name" style="font-size:14px;font-weight:700;color:#1a1a2e;padding:6px 0"></div>
-      </div>
-      <div class="modal-field">
-        <label>新しい社員番号</label>
-        <input type="text" id="change-eid-value" placeholder="例：10008">
-      </div>
-      <p style="font-size:12px;color:#9ca3af;margin-top:-8px">※ ログイン時の社員番号も変更されます</p>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="closeModal('change-employee-id-modal')">キャンセル</button>
-        <button class="btn btn-primary" onclick="changeEmployeeId()">変更する</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- パスワードリセットモーダル（全権管理者のみ） -->
-  <div class="modal-overlay" id="reset-password-modal">
-    <div class="modal">
-      <h3>パスワードをリセット</h3>
-      <div class="modal-field">
-        <label>対象メンバー</label>
-        <div id="reset-pw-name" style="font-size:14px;font-weight:700;color:#1a1a2e;padding:6px 0"></div>
-      </div>
-      <div class="modal-field">
-        <label>新しいパスワード</label>
-        <input type="password" id="reset-pw-value" placeholder="8文字以上を推奨">
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="closeModal('reset-password-modal')">キャンセル</button>
-        <button class="btn btn-primary" onclick="resetPassword()">リセットする</button>
+        <button class="btn btn-secondary" onclick="closeModal('edit-member-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveEditMember()">保存する</button>
       </div>
     </div>
   </div>
@@ -820,12 +786,8 @@
             '</select>' +
           '</td>' +
           '<td><div class="td-actions">' +
-            '<button class="btn btn-sm" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" onclick="openEditMemberNameModal(\'' + m.id + '\',\'' + m.name.replace(/'/g,"&#39;") + '\')">名前編集</button>' +
-            (currentRole === 'manager_admin'
-              ? '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="openChangeEmployeeIdModal(\'' + m.id + '\',\'' + m.employee_id + '\',\'' + m.name.replace(/'/g,"&#39;") + '\')">社員番号</button>' +
-                '<button class="btn btn-sm" style="background:#fef3cd;color:#856404;border:1px solid #f0d980" onclick="openResetPasswordModal(\'' + m.id + '\',\'' + m.name.replace(/'/g,"&#39;") + '\')">PW変更</button>'
-              : '') +
-            '<button class="btn btn-danger btn-sm" onclick="deleteMember(\'' + m.id + '\', \'' + m.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
+            '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0;white-space:nowrap" onclick="openEditMemberModal(\'' + m.id + '\',\'' + m.name.replace(/'/g,"&#39;") + '\',\'' + (m.employee_id||'').replace(/'/g,"&#39;") + '\')">編集</button>' +
+            '<button class="btn btn-danger btn-sm" style="white-space:nowrap" onclick="deleteMember(\'' + m.id + '\', \'' + m.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
           '</div></td>' +
         '</tr>';
       }).join('');
@@ -1047,80 +1009,62 @@
     // ============================================
     // メンバー名前変更（部署管理者・全権管理者）
     // ============================================
-    var editMemberNameTargetId = null;
+    // メンバー編集（統合モーダル）
+    // 部署管理者：名前のみ / 全権管理者：名前・社員番号・PW
+    // ============================================
+    var editMemberTargetId = null;
+    var editMemberOriginalEid = null;
 
-    function openEditMemberNameModal(userId, currentName) {
-      editMemberNameTargetId = userId;
-      document.getElementById('edit-member-name-target').textContent = '現在：' + currentName;
-      document.getElementById('edit-member-name-value').value = currentName;
-      document.getElementById('edit-member-name-modal').classList.add('show');
+    function openEditMemberModal(userId, name, employeeId) {
+      editMemberTargetId = userId;
+      editMemberOriginalEid = employeeId;
+      document.getElementById('edit-member-name').value = name;
+      var isAdmin = currentRole === 'manager_admin';
+      document.getElementById('edit-member-eid-field').style.display = isAdmin ? '' : 'none';
+      document.getElementById('edit-member-pw-field').style.display = isAdmin ? '' : 'none';
+      if (isAdmin) {
+        document.getElementById('edit-member-eid').value = employeeId;
+        document.getElementById('edit-member-pw').value = '';
+      }
+      document.getElementById('edit-member-modal').classList.add('show');
     }
 
-    async function saveMemberName() {
-      var newName = document.getElementById('edit-member-name-value').value.trim();
+    async function saveEditMember() {
+      var newName = document.getElementById('edit-member-name').value.trim();
       if (!newName) { alert('名前を入力してください'); return; }
-      var { error } = await client.from('user_profiles').update({ name: newName }).eq('id', editMemberNameTargetId);
-      if (error) { alert('更新エラー：' + error.message); return; }
-      closeModal('edit-member-name-modal');
-      showToast('名前を変更しました ✓');
+
+      // 名前を更新
+      var { error: nameErr } = await client.from('user_profiles').update({ name: newName }).eq('id', editMemberTargetId);
+      if (nameErr) { alert('名前の更新エラー：' + nameErr.message); return; }
+
+      if (currentRole === 'manager_admin') {
+        // 社員番号を更新（変更がある場合のみ）
+        var newEid = document.getElementById('edit-member-eid').value.trim();
+        if (newEid && newEid !== editMemberOriginalEid) {
+          // 重複チェック（自分自身は除外）
+          var { data: existing } = await client.from('user_profiles').select('id').eq('employee_id', newEid).neq('id', editMemberTargetId).limit(1);
+          if (existing && existing.length > 0) { alert('その社員番号はすでに使用されています'); return; }
+
+          var { error: eidErr } = await client.from('user_profiles').update({ employee_id: newEid }).eq('id', editMemberTargetId);
+          if (eidErr) { alert('社員番号の更新エラー：' + eidErr.message); return; }
+
+          // Auth のメールアドレスも更新（ログイン時に使うため）
+          var { error: authEidErr } = await adminClient.auth.admin.updateUserById(editMemberTargetId, { email: newEid + '@education-app.com' });
+          if (authEidErr) { console.error('Authメール更新エラー:', authEidErr.message); }
+        }
+
+        // パスワードを更新（入力がある場合のみ）
+        var newPw = document.getElementById('edit-member-pw').value;
+        if (newPw) {
+          if (newPw.length < 6) { alert('パスワードは6文字以上で入力してください'); return; }
+          var { error: pwErr } = await adminClient.auth.admin.updateUserById(editMemberTargetId, { password: newPw });
+          if (pwErr) { alert('パスワードの更新エラー：' + pwErr.message); return; }
+        }
+      }
+
+      closeModal('edit-member-modal');
+      showToast('メンバー情報を更新しました ✓');
       loadMembers();
-    }
-
-    // ============================================
-    // 社員番号変更（全権管理者のみ）
-    // ============================================
-    var changeEidTargetId = null;
-
-    function openChangeEmployeeIdModal(userId, currentEid, name) {
-      changeEidTargetId = userId;
-      document.getElementById('change-eid-name').textContent = name + '（現在：' + currentEid + '）';
-      document.getElementById('change-eid-value').value = '';
-      document.getElementById('change-employee-id-modal').classList.add('show');
-    }
-
-    async function changeEmployeeId() {
-      var newEid = document.getElementById('change-eid-value').value.trim();
-      if (!newEid) { alert('新しい社員番号を入力してください'); return; }
-
-      // 重複チェック
-      var { data: existing } = await client.from('user_profiles').select('id').eq('employee_id', newEid).limit(1);
-      if (existing && existing.length > 0) { alert('その社員番号はすでに使用されています'); return; }
-
-      // user_profiles を更新
-      var { error: profErr } = await client.from('user_profiles').update({ employee_id: newEid }).eq('id', changeEidTargetId);
-      if (profErr) { alert('更新エラー：' + profErr.message); return; }
-
-      // Auth のメールアドレスも更新（ログイン時に使うため）
-      var newEmail = newEid + '@education-app.com';
-      var { error: authErr } = await adminClient.auth.admin.updateUserById(changeEidTargetId, { email: newEmail });
-      if (authErr) { console.error('Authメール更新エラー:', authErr.message); }
-
-      closeModal('change-employee-id-modal');
-      showToast('社員番号を変更しました ✓');
-      loadMembers();
-    }
-
-    // ============================================
-    // パスワードリセット（全権管理者のみ）
-    // ============================================
-    var resetPwTargetId = null;
-
-    function openResetPasswordModal(userId, name) {
-      resetPwTargetId = userId;
-      document.getElementById('reset-pw-name').textContent = name;
-      document.getElementById('reset-pw-value').value = '';
-      document.getElementById('reset-password-modal').classList.add('show');
-    }
-
-    async function resetPassword() {
-      var newPw = document.getElementById('reset-pw-value').value;
-      if (!newPw || newPw.length < 6) { alert('6文字以上のパスワードを入力してください'); return; }
-
-      var { error } = await adminClient.auth.admin.updateUserById(resetPwTargetId, { password: newPw });
-      if (error) { alert('リセットエラー：' + error.message); return; }
-
-      closeModal('reset-password-modal');
-      showToast('パスワードをリセットしました ✓');
     }
 
     // ============================================
