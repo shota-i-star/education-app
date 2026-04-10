@@ -227,6 +227,9 @@
       <div class="page" id="page-test">
         <h2>テスト管理</h2>
         <p class="page-desc">カテゴリ・等級ごとに問題集と問題を管理します。</p>
+        <div style="margin-bottom:16px">
+          <button class="btn btn-primary" onclick="openAddTestSetModal()">＋ 問題集を追加</button>
+        </div>
         <div id="test-list"><div class="loading-text">読み込み中...</div></div>
       </div>
 
@@ -234,11 +237,11 @@
       <div class="page" id="page-org">
         <h2>部署・エリア・店舗管理</h2>
         <p class="page-desc">部署・エリア・所属店舗を設定します。</p>
-        <div id="org-list"><div class="loading-text">読み込み中...</div></div>
-        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
           <button class="btn btn-primary" id="btn-add-dept" onclick="openAddDeptModal()">＋ 新しい部署を追加</button>
           <button class="btn btn-sm" id="btn-csv-store" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="openCsvModal('store')">📋 CSVで店舗を一括追加</button>
         </div>
+        <div id="org-list"><div class="loading-text">読み込み中...</div></div>
       </div>
 
     </div>
@@ -1146,8 +1149,7 @@
       }
       var { data: depts } = await deptsQuery;
       if (!depts || depts.length === 0) {
-        list.innerHTML = '<div class="loading-text">部署が登録されていません</div>' +
-          '<button class="btn btn-primary" style="margin-top:16px" onclick="openAddTestSetModal()">＋ 問題集を追加</button>';
+        list.innerHTML = '<div class="loading-text">部署が登録されていません</div>';
         return;
       }
 
@@ -1237,8 +1239,7 @@
         '</div>';
       }).join('');
 
-      list.innerHTML = html +
-        '<button class="btn btn-primary" style="margin-top:4px" onclick="openAddTestSetModal()">＋ 問題集を追加</button>';
+      list.innerHTML = html;
     }
 
     async function openAddTestSetModal() {
