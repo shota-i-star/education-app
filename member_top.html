@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="image/favicon.png">
+  <link rel="apple-touch-icon" href="image/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AZism">
@@ -18,7 +18,7 @@
     body { font-family: "M PLUS Rounded 1c", "Hiragino Sans", "Meiryo", sans-serif; background: #f0f4f8; color: #1a1a2e; }
 
     header { background: #495e9f; color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
-    header .app-name { font-size: 14px; opacity: 0.85; }
+    header .app-name { font-size: 14px; opacity: 0.85; display: flex; align-items: center; gap: 8px; overflow: visible; }
     header .user-info { display: flex; align-items: center; gap: 12px; font-size: 13px; }
     .grade-badge { background: #bd3c40; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 20px; }
     .btn-logout { padding: 5px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; color: #fff; font-size: 12px; cursor: pointer; font-family: 'M PLUS Rounded 1c', sans-serif; transition: background 0.15s; }
@@ -86,33 +86,35 @@
        スマホ対応（640px以下）
     ============================================ */
     @media (max-width: 640px) {
-      /* ヘッダー：アプリ名を非表示にしてすっきりさせる */
-      header { padding: 0 14px; }
-      header .app-name { display: none; }
-      header .user-info { gap: 8px; }
-      .btn-logout { padding: 5px 10px; font-size: 11px; }
+      /* ヘッダー：ロゴ+テキストを縮小して折り返しなし */
+      header { padding: 0 12px; height: 50px; }
+      header .app-name { font-size: 12px; white-space: nowrap; flex-shrink: 1; min-width: 0; }
+      header .app-name img { height: 22px; flex-shrink: 0; }
+      header .user-info { gap: 6px; font-size: 12px; flex-shrink: 0; }
+      header .user-info #header-name { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .grade-badge { font-size: 10px; padding: 2px 7px; white-space: nowrap; }
+      .btn-logout { padding: 4px 9px; font-size: 11px; white-space: nowrap; }
 
       /* レイアウト：縦積みに変更 */
       .layout { flex-direction: column; padding: 12px 12px; gap: 12px; }
 
-      /* サイドバー：横スクロールのタブ型に変換 */
+      /* サイドバー：均等幅タブ（スクロールなし） */
       .sidebar { width: 100%; }
       .sidebar-title { display: none; }
       .sidebar-card {
         display: flex;
         flex-direction: row;
-        overflow-x: auto;
+        overflow: hidden;
         border-radius: 12px;
-        scrollbar-width: none; /* Firefox */
       }
-      .sidebar-card::-webkit-scrollbar { display: none; } /* Chrome */
       .sidebar-item {
+        flex: 1;
+        text-align: center;
         white-space: nowrap;
-        flex-shrink: 0;
         border-bottom: none;
         border-right: 1px solid #f0f4f8;
-        padding: 10px 16px;
-        font-size: 13px;
+        padding: 10px 4px;
+        font-size: 12px;
       }
       .sidebar-item:last-child { border-right: none; }
       .sidebar-item.active {
@@ -146,7 +148,7 @@
 </head>
 <body>
   <header>
-    <span class="app-name" style="display:flex;align-items:center;gap:8px;"><img src="logo-white.png" alt="" style="height:28px;width:auto;object-fit:contain;filter:brightness(0) invert(1);">AZism 教育進捗管理</span>
+    <span class="app-name" style="display:flex;align-items:center;gap:8px;"><img src="image/logo-white.png" alt="" style="height:26px;width:auto;object-fit:contain;filter:brightness(0) invert(1);flex-shrink:0;display:block;">AZism 教育進捗管理</span>
     <div class="user-info">
       <span class="grade-badge" id="grade-badge">－等級</span>
       <span id="header-name">読み込み中...</span>

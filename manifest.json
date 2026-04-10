@@ -1,0 +1,24 @@
+{
+  "name": "AZism 教育進捗管理",
+  "short_name": "AZism",
+  "description": "AZ-GROUP 教育進捗管理アプリ",
+  "start_url": "./member_top.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#495e9f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "image/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "image/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
