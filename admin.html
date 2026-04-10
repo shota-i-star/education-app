@@ -13,7 +13,7 @@
     header .app-name { font-size: 14px; opacity: 0.85; }
     header .user-info { display: flex; align-items: center; gap: 12px; font-size: 13px; }
     .role-badge { background: #bd3c40; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 20px; }
-    .btn-logout { padding: 5px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; color: #fff; font-size: 12px; cursor: pointer; font-family: "BIZ UDPGothic", sans-serif; transition: background 0.15s; }
+    .btn-logout { padding: 7px 16px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer; font-family: "BIZ UDPGothic", sans-serif; transition: background 0.15s; }
     .btn-logout:hover { background: rgba(255,255,255,0.25); }
     .layout { display: flex; flex: 1; }
     .sidenav { width: 200px; background: #fff; border-right: 1px solid #e5e7eb; flex-shrink: 0; padding: 16px 0; }
@@ -1916,8 +1916,10 @@
                     area.name +
                     '<span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:4px">' + areaStores.length + '店舗</span>' +
                   '</h4>' +
-                  (!isDeptAdmin ? '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="event.stopPropagation();openEditAreaModal(' + area.id + ', \'' + area.name.replace(/'/g,"&#39;") + '\')">編集</button>' : '') +
-                  '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteArea(' + area.id + ', \'' + area.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
+                  '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0">' +
+                    (!isDeptAdmin ? '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0;white-space:nowrap" onclick="event.stopPropagation();openEditAreaModal(' + area.id + ', \'' + area.name.replace(/'/g,"&#39;") + '\')">編集</button>' : '') +
+                    '<button class="btn btn-danger btn-sm" style="white-space:nowrap" onclick="event.stopPropagation();deleteArea(' + area.id + ', \'' + area.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
+                  '</div>' +
                 '</div>' +
                 '<div id="' + areaBodyId + '" class="area-card-body" style="display:none">' +
                   '<table><thead><tr><th>店舗名</th><th></th></tr></thead>' +
@@ -1933,8 +1935,10 @@
 
         // dept_admin には部署の削除・編集ボタンを表示しない（全権管理者のみ）
         var deleteDeptBtn = isDeptAdmin ? '' :
-          '<button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4)" onclick="event.stopPropagation();openEditDeptModal(' + dept.id + ', \'' + dept.name.replace(/'/g,"&#39;") + '\')">編集</button>' +
-          '<button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4)" onclick="event.stopPropagation();deleteDept(' + dept.id + ', \'' + dept.name.replace(/'/g,"&#39;") + '\')">削除</button>';
+          '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0">' +
+            '<button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);white-space:nowrap" onclick="event.stopPropagation();openEditDeptModal(' + dept.id + ', \'' + dept.name.replace(/'/g,"&#39;") + '\')">編集</button>' +
+            '<button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);white-space:nowrap" onclick="event.stopPropagation();deleteDept(' + dept.id + ', \'' + dept.name.replace(/'/g,"&#39;") + '\')">削除</button>' +
+          '</div>';
 
         return '<div class="dept-card">' +
           '<div class="dept-card-header toggle-btn" onclick="toggleSection(\'' + deptBodyId + '\')">' +

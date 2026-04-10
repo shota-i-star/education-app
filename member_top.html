@@ -243,11 +243,13 @@
     // ============================================
     // コンテンツを読み込む
     // ============================================
-    async function loadContent(grade) {
+    async function loadContent(grade, silent) {
       CURRENT_VIEW_GRADE = grade;
       var isPast = grade < CURRENT_GRADE;
       var panelArea = document.getElementById('panel-area');
-      panelArea.innerHTML = '<div class="loading-text">読み込み中...</div>';
+      if (!silent) {
+        panelArea.innerHTML = '<div class="loading-text">読み込み中...</div>';
+      }
 
       // カテゴリ・項目・ステップを取得する
       var { data: categories } = await client.from('categories').select('id, name').order('id');
@@ -366,7 +368,7 @@
 
       // ★修正①：チェック時は固定メッセージを渡す
       showToast('保存しました ✓');
-      loadContent(CURRENT_VIEW_GRADE); // 画面を再描画する
+      loadContent(CURRENT_VIEW_GRADE, true); // 白フラッシュなしで再描画する
     }
 
     // ============================================
