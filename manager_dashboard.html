@@ -26,7 +26,7 @@
     .gradeup-panel h2 { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: #495e9f; }
     main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
     h2 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px; }
     .summary-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 18px 20px; }
     .summary-card .s-label { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
     .summary-card .s-value { font-size: 26px; font-weight: 700; color: #495e9f; }
@@ -120,6 +120,11 @@
         <div class="s-label">メンバー数</div>
         <div class="s-value" id="s-total">－ <span>名</span></div>
         <div class="s-sub">ロール：member</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-label">平均進捗率（全体）</div>
+        <div class="s-value" id="s-progress-all">－ <span>%</span></div>
+        <div class="s-sub">部署全カテゴリの平均</div>
       </div>
       <div class="summary-card">
         <div class="s-label">平均進捗率（現等級）</div>
@@ -544,16 +549,18 @@
 
     function renderSummary(memberData) {
       var total = memberData.length;
-      var avgProgress = total > 0 ? Math.round(memberData.reduce(function(s,m){return s+m.progress;},0)/total) : 0;
+      var avgProgress    = total > 0 ? Math.round(memberData.reduce(function(s,m){return s+m.progress;},0)/total) : 0;
+      var avgProgressAll = total > 0 ? Math.round(memberData.reduce(function(s,m){return s+(m.progressAll||0);},0)/total) : 0;
       var testedMembers = memberData.filter(function(m){return m.score!==null;});
       var avgScore = testedMembers.length > 0 ? Math.round(testedMembers.reduce(function(s,m){return s+m.score;},0)/testedMembers.length) : 0;
       var failedCount = memberData.filter(function(m){return m.passed===false;}).length;
-      document.getElementById('s-total').innerHTML    = total + ' <span>名</span>';
-      document.getElementById('s-progress').innerHTML = avgProgress + ' <span>%</span>';
-      document.getElementById('s-score').innerHTML    = (testedMembers.length>0?avgScore:'－') + ' <span>点</span>';
-      document.getElementById('s-failed').innerHTML   = failedCount + ' <span>名</span>';
+      document.getElementById('s-total').innerHTML        = total + ' <span>名</span>';
+      document.getElementById('s-progress-all').innerHTML = avgProgressAll + ' <span>%</span>';
+      document.getElementById('s-progress').innerHTML     = avgProgress + ' <span>%</span>';
+      document.getElementById('s-score').innerHTML        = (testedMembers.length>0?avgScore:'－') + ' <span>点</span>';
+      document.getElementById('s-failed').innerHTML       = failedCount + ' <span>名</span>';
       document.getElementById('tab-summary').textContent =
-        total + '名 ／ 平均進捗 ' + avgProgress + '% ／ 平均点 ' + (testedMembers.length>0?avgScore:'－') + '点';
+        total + '名 ／ 全体進捗 ' + avgProgressAll + '% ／ 現等級進捗 ' + avgProgress + '% ／ 平均点 ' + (testedMembers.length>0?avgScore:'－') + '点';
     }
 
     function openDetail(userId) { window.location.href = 'member_detail.html?id=' + userId; }

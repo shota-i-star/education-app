@@ -60,13 +60,13 @@
     #member-list table { width: 100%; table-layout: fixed; }
     #member-list th:nth-child(1), #member-list td:nth-child(1) { width: 13%; }
     #member-list th:nth-child(2), #member-list td:nth-child(2) { width: 10%; }
-    #member-list th:nth-child(3), #member-list td:nth-child(3) { width: 13%; }
+    #member-list th:nth-child(3), #member-list td:nth-child(3) { width: 17%; overflow: hidden; }
     #member-list th:nth-child(4), #member-list td:nth-child(4) { width: 15%; }
     #member-list th:nth-child(5), #member-list td:nth-child(5) { width: 9%; }
     #member-list th:nth-child(6), #member-list td:nth-child(6) { width: 13%; }
-    #member-list th:nth-child(7), #member-list td:nth-child(7) { width: 27%; }
+    #member-list th:nth-child(7), #member-list td:nth-child(7) { width: 23%; }
     #member-list td { padding: 8px 6px; }
-    #member-list select.btn-sm { width: 100%; max-width: none; font-size: 11px; padding: 3px 4px; }
+    #member-list select.btn-sm { width: 100%; max-width: 100%; box-sizing: border-box; font-size: 11px; padding: 3px 4px; }
     #member-list td:first-child { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     #member-list td:nth-child(2) { color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     #member-list .td-actions { flex-wrap: wrap; gap: 4px; }
@@ -2027,7 +2027,15 @@
         for (var i = 0; i < csvParsedData.length; i++) {
           var r = csvParsedData[i];
           var name = (r[0]||'').trim(), eid = (r[1]||'').trim(), pw = (r[2]||'').trim();
-          var role = (r[3]||'member').trim(), grade = parseInt(r[4])||0;
+          // ロールを正規化（大文字→小文字、スペース→アンダースコア）してからバリデーション
+          var rawRole = (r[3]||'').trim();
+          var role = rawRole.toLowerCase().replace(/\s+/g, '_') || 'member';
+          var validRoles = ['member', 'manager', 'dept_admin'];
+          if (!validRoles.includes(role)) {
+            errors.push((i+1) + '行目：役割「' + rawRole + '」は無効です（member / manager / dept_admin のいずれかを指定してください）');
+            continue;
+          }
+          var grade = parseInt(r[4])||0;
           var deptName = (r[5]||'').trim(), storeName = (r[6]||'').trim(), areaName = (r[7]||'').trim();
 
           if (!name || !eid || !pw) { errors.push((i+1) + '行目：名前・社員番号・パスワードは必須です'); continue; }
