@@ -22,12 +22,14 @@
     .role-badge { background: #bd3c40; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 20px; }
     .btn-logout { padding: 5px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; color: #fff; font-size: 12px; cursor: pointer; font-family: "BIZ UDPGothic", sans-serif; transition: background 0.15s; }
     .btn-logout:hover { background: rgba(255,255,255,0.25); }
+    .btn-reload { padding: 5px 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; color: #fff; font-size: 14px; cursor: pointer; transition: background 0.15s; line-height: 1; }
+    .btn-reload:hover { background: rgba(255,255,255,0.25); }
     main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
     .breadcrumb { font-size: 12px; color: #6b7280; margin-bottom: 16px; }
     .breadcrumb a { color: #495e9f; text-decoration: none; }
     .breadcrumb a:hover { text-decoration: underline; }
-    .profile-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-    .profile-left { display: flex; align-items: center; gap: 20px; }
+    .profile-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+    .profile-left { display: flex; align-items: flex-start; gap: 16px; flex: 1; min-width: 0; }
     .avatar { width: 56px; height: 56px; border-radius: 50%; background: #495e9f; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; flex-shrink: 0; }
     .profile-info h1 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
     .profile-tags { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -66,6 +68,14 @@
     .score-low { color: #bd3c40; font-weight: 700; }
     .readonly-note { font-size: 12px; color: #9ca3af; margin-bottom: 12px; }
     .loading-text { text-align: center; padding: 32px; color: #9ca3af; font-size: 13px; }
+    .toggle-grade { border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+    .toggle-grade-header { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; background: #f5f7ff; cursor: pointer; user-select: none; }
+    .toggle-grade-header:hover { background: #eef0fa; }
+    .toggle-cat { border-top: 1px solid #f0f4f8; }
+    .toggle-cat-header { display: flex; justify-content: space-between; align-items: center; padding: 9px 16px 9px 32px; background: #fff; cursor: pointer; user-select: none; }
+    .toggle-cat-header:hover { background: #f9fafb; }
+    .toggle-arrow { font-size: 11px; color: #9ca3af; margin-right: 6px; transition: transform 0.15s; display: inline-block; }
+    .toggle-arrow.closed { transform: rotate(-90deg); }
     .comment-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
     .comment-bubble { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; }
     .comment-meta { font-size: 11px; color: #9ca3af; margin-bottom: 6px; display: flex; justify-content: space-between; }
@@ -138,6 +148,7 @@
     <div class="user-info">
       <span class="role-badge" id="role-badge">MG</span>
       <span id="header-name">読み込み中...</span>
+      <button class="btn-reload" onclick="location.reload()" title="更新">🔄</button>
       <button class="btn-logout" onclick="logout()">ログアウト</button>
     </div>
   </header>
@@ -164,7 +175,7 @@
 
     <!-- 進捗チェックリスト -->
     <div class="section">
-      <h2>チェック状況</h2>
+      <h2>進捗状況</h2>
       <p class="readonly-note">※ この画面は閲覧のみです。チェックの変更はメンバー本人が行います。</p>
       <div id="check-list"><div class="loading-text">読み込み中...</div></div>
     </div>
@@ -195,14 +206,6 @@
       auth: { persistSession: true }
     });
 
-    // チェック項目の定義（member_top.htmlと合わせる）
-    var CHECK_ITEMS = [
-      { id: 'grade1_training_phone',    label: '電話対応の基本',   category: '新人研修' },
-      { id: 'grade1_training_claim',    label: 'クレーム初期対応', category: '新人研修' },
-      { id: 'grade1_azism_team',        label: 'チームワーク',     category: 'AZism共通言語' },
-      { id: 'grade1_azism_hospitality', label: 'ホスピタリティ',   category: 'AZism共通言語' }
-    ];
-
     var TARGET_USER_ID = null;
     var CURRENT_USER_NAME = '';
 
@@ -225,22 +228,17 @@
 
       document.getElementById('header-name').textContent = profile.name;
       var roleLabels = {
-            member:        'メンバー',
-            manager:       'MG',
-            manager_admin: '全権管理者',
-            dept_admin:    '部署管理者'
-            };
+        member:        'メンバー',
+        manager:       'MG',
+        manager_admin: '全権管理者',
+        dept_admin:    '部署管理者'
+      };
       document.getElementById('role-badge').textContent = roleLabels[profile.role] || 'MG';
       CURRENT_USER_NAME = profile.name;
 
-      // URLからメンバーIDを取得する
       var params = new URLSearchParams(window.location.search);
       TARGET_USER_ID = params.get('id');
-
-      if (!TARGET_USER_ID) {
-        window.location.href = 'manager_dashboard.html';
-        return;
-      }
+      if (!TARGET_USER_ID) { window.location.href = 'manager_dashboard.html'; return; }
 
       loadMemberDetail();
     }
@@ -259,26 +257,33 @@
         .eq('id', TARGET_USER_ID)
         .limit(1);
 
-      if (!profiles || profiles.length === 0) {
-        window.location.href = 'manager_dashboard.html';
-        return;
-      }
+      if (!profiles || profiles.length === 0) { window.location.href = 'manager_dashboard.html'; return; }
       var member = profiles[0];
 
-      // ② チェック状況を取得する
-    var { data: allSteps } = await client
-    .from('check_steps')
-    .select('id, item_id');
+      // ② カテゴリ・項目・ステップ・チェック状況を取得する
+      var { data: categories } = await client.from('categories').select('id, name').order('id');
+      var { data: allItems }   = await client.from('check_items').select('id, name, grade, category_id').order('id');
+      var { data: allSteps }   = await client.from('check_steps').select('id, item_id, name, order_no').order('order_no');
+      var { data: checks }     = await client
+        .from('check_progress')
+        .select('step_id')
+        .eq('user_id', TARGET_USER_ID)
+        .not('step_id', 'is', null);
 
-    var { data: checks } = await client
-    .from('check_progress')
-    .select('step_id')
-    .eq('user_id', TARGET_USER_ID)
-    .not('step_id', 'is', null);
+      var checkedStepIds = (checks || []).map(function(c) { return c.step_id; });
 
-    var checkedStepIds = (checks || []).map(function(c) { return c.step_id; });
-    var totalSteps = (allSteps || []).length;
-    var checkedCount = checkedStepIds.length;
+      // 全体進捗率を計算する（0等級〜現等級のすべてのステップ）
+      var memberItemIds = (allItems || []).filter(function(i) { return i.grade <= member.grade; }).map(function(i) { return i.id; });
+      var memberStepIds = (allSteps || []).filter(function(s) { return memberItemIds.indexOf(s.item_id) !== -1; }).map(function(s) { return s.id; });
+      var overallChecked = memberStepIds.filter(function(id) { return checkedStepIds.indexOf(id) !== -1; }).length;
+      var overallProgress = memberStepIds.length > 0 ? Math.round(overallChecked / memberStepIds.length * 100) : 0;
+
+      // 現等級進捗率を計算する
+      var curItemIds = (allItems || []).filter(function(i) { return i.grade === member.grade; }).map(function(i) { return i.id; });
+      var curStepIds = (allSteps || []).filter(function(s) { return curItemIds.indexOf(s.item_id) !== -1; }).map(function(s) { return s.id; });
+      var curChecked = curStepIds.filter(function(id) { return checkedStepIds.indexOf(id) !== -1; }).length;
+      var curProgress = curStepIds.length > 0 ? Math.round(curChecked / curStepIds.length * 100) : 0;
+
       // ③ テスト結果を取得する
       var { data: results } = await client
         .from('test_results')
@@ -294,103 +299,128 @@
         .not('score', 'is', null)
         .limit(1);
 
-      // 進捗率を計算する
-        var progress = Math.round(checkedCount / totalSteps * 100);
-
-      // テスト平均点を計算する
       var autoScore = (results && results.length > 0) ? results[0].score : null;
       var descScore = (textScores && textScores.length > 0) ? textScores[0].score : null;
-      var totalScore = autoScore !== null
-        ? (descScore !== null ? autoScore + descScore : autoScore)
-        : null;
+      var totalScore = autoScore !== null ? (descScore !== null ? autoScore + descScore : autoScore) : null;
 
       // 画面を描画する
-      renderProfile(member, progress, totalScore, results ? results.length : 0);
-      renderCheckList(checkedStepIds, member.grade, allSteps || []);
+      renderProfile(member, overallProgress, curProgress, totalScore, results ? results.length : 0);
+      renderCheckList(checkedStepIds, member.grade, categories || [], allItems || [], allSteps || []);
       renderTestHistory(results || []);
       loadComments();
     }
 
     // プロフィールカードを描画する
-    function renderProfile(member, progress, score, testCount) {
+    function renderProfile(member, overallProgress, curProgress, score, testCount) {
       var firstChar = member.name.charAt(0);
       document.getElementById('profile-card').innerHTML =
         '<div class="profile-left">' +
           '<div class="avatar">' + firstChar + '</div>' +
-          '<div class="profile-info">' +
+          '<div class="profile-info" style="flex:1;min-width:0">' +
             '<h1>' + member.name + '</h1>' +
-            '<div class="profile-tags">' +
+            '<div class="profile-tags" style="margin-top:6px">' +
               '<span class="tag tag-grade">' + member.grade + '等級</span>' +
               '<span class="tag tag-store">' + (member.store || '未設定') + '</span>' +
               '<span class="tag tag-area">' + (member.area || '未設定') + '</span>' +
             '</div>' +
+            '<div style="margin-top:14px;display:flex;gap:20px">' +
+              '<div style="flex:1">' +
+                '<div class="bar-label"><span>全体進捗</span><span>' + overallProgress + '%</span></div>' +
+                '<div class="bar-bg"><div class="bar-fill" style="background:#b0b8c8;width:' + overallProgress + '%"></div></div>' +
+              '</div>' +
+              '<div style="flex:1">' +
+                '<div class="bar-label"><span>' + member.grade + '等級の進捗</span><span>' + curProgress + '%</span></div>' +
+                '<div class="bar-bg"><div class="bar-fill" style="width:' + curProgress + '%"></div></div>' +
+              '</div>' +
+            '</div>' +
           '</div>' +
         '</div>' +
-        '<div class="profile-stats">' +
-          '<div class="stat"><div class="val">' + progress + '<span>%</span></div><div class="lbl">全体進捗</div></div>' +
+        '<div class="profile-stats" style="flex-shrink:0">' +
           '<div class="stat"><div class="val">' + (score !== null ? score : '－') + '<span>' + (score !== null ? '点' : '') + '</span></div><div class="lbl">テスト点数</div></div>' +
           '<div class="stat"><div class="val">' + testCount + '<span>回</span></div><div class="lbl">受験回数</div></div>' +
         '</div>';
     }
 
-    // チェックリストを描画する
-    function renderCheckList(checkedStepIds, grade, allSteps) {
-      var categories = {};
-      CHECK_ITEMS.forEach(function(item) {
-        if (!categories[item.category]) categories[item.category] = [];
-        categories[item.category].push(item);
-      });
+    // トグルの開閉
+    function toggleSection(bodyId) {
+      var body  = document.getElementById(bodyId);
+      var arrow = document.getElementById('arr-' + bodyId);
+      if (!body) return;
+      var isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : 'block';
+      if (arrow) arrow.classList.toggle('closed', isOpen);
+    }
 
+    // 進捗状況チェックリストを描画する（等級→カテゴリ→項目のトグル階層）
+    function renderCheckList(checkedStepIds, memberGrade, categories, allItems, allSteps) {
       var html = '';
-      var totalChecked = checkedStepIds.length;
-      var totalSteps   = allSteps.length;
-      var totalProgress = totalSteps > 0 ? Math.round(totalChecked / totalSteps * 100) : 0;
 
-      html += '<div class="bar-label"><span>全体進捗</span><span>' + totalProgress + '%</span></div>';
-      html += '<div class="bar-bg" style="margin-bottom:16px"><div class="bar-fill" style="width:' + totalProgress + '%"></div></div>';
+      for (var g = 0; g <= memberGrade; g++) {
+        var gradeItems   = allItems.filter(function(i) { return i.grade === g; });
+        var gradeStepIds = allSteps.filter(function(s) {
+          return gradeItems.some(function(i) { return i.id === s.item_id; });
+        }).map(function(s) { return s.id; });
+        var gradeChecked = gradeStepIds.filter(function(id) { return checkedStepIds.indexOf(id) !== -1; }).length;
+        var gradeProgress = gradeStepIds.length > 0 ? Math.round(gradeChecked / gradeStepIds.length * 100) : 0;
+        var isCurrent = (g === memberGrade);
+        var gradeBodyId = 'grade-body-' + g;
 
-      Object.keys(categories).forEach(function(catName, idx) {
-        var items = categories[catName];
-
-        // このカテゴリのステップIDを取得する
-        var catStepIds = allSteps
-          .filter(function(s) {
-            return items.some(function(i) {
-              // item_idがcheck_itemsのidなので一致するものを探す
-              return true; // 全ステップを対象（後で正確なフィルタに改善可能）
-            });
-          })
-          .map(function(s) { return s.id; });
-
-        var catChecked = catStepIds.filter(function(id) {
-          return checkedStepIds.indexOf(id) !== -1;
-        }).length;
-
-        var catProgress = catStepIds.length > 0
-          ? Math.round(catChecked / catStepIds.length * 100)
-          : 0;
-
-        if (idx > 0) html += '<hr>';
-        html += '<div class="cat-header">' +
-          '<span class="cat-name">' + catName + '</span>' +
-          '<span class="cat-meta">' + catChecked + ' / ' + catStepIds.length + ' チェック済み</span>' +
-        '</div>';
-        html += '<div class="bar-bg" style="margin-bottom:12px"><div class="bar-fill" style="width:' + catProgress + '%"></div></div>';
-
-        items.forEach(function(item) {
-          var itemSteps = allSteps.filter(function(s) {
-            return s.item_id !== undefined;
-          });
-          html += '<div class="item-row">' +
-            '<div class="item-name">' + item.label + '</div>' +
-            '<div class="steps">' +
-              '<span class="step checked">チェック済み</span>' +
+        html += '<div class="toggle-grade">' +
+          '<div class="toggle-grade-header" onclick="toggleSection(\'' + gradeBodyId + '\')">' +
+            '<div style="display:flex;align-items:center;gap:8px">' +
+              '<span class="toggle-arrow" id="arr-' + gradeBodyId + '">▾</span>' +
+              '<span style="font-weight:700;font-size:14px">' + g + '等級' +
+                (isCurrent ? ' <span style="background:#495e9f;color:#fff;font-size:10px;padding:1px 8px;border-radius:20px;font-weight:400;vertical-align:middle">現在</span>' : '') +
+              '</span>' +
             '</div>' +
-          '</div>';
-        });
-      });
+            '<span style="font-size:12px;color:#6b7280">' + gradeProgress + '% (' + gradeChecked + '/' + gradeStepIds.length + ')</span>' +
+          '</div>' +
+          '<div id="' + gradeBodyId + '">';
 
-      document.getElementById('check-list').innerHTML = html;
+        categories.forEach(function(cat) {
+          var catItems = gradeItems.filter(function(i) { return i.category_id === cat.id; });
+          if (catItems.length === 0) return;
+
+          var catSteps   = allSteps.filter(function(s) { return catItems.some(function(i) { return i.id === s.item_id; }); });
+          var catChecked = catSteps.filter(function(s) { return checkedStepIds.indexOf(s.id) !== -1; }).length;
+          var catBodyId  = 'cat-body-' + g + '-' + cat.id;
+
+          html += '<div class="toggle-cat">' +
+            '<div class="toggle-cat-header" onclick="toggleSection(\'' + catBodyId + '\')">' +
+              '<div style="display:flex;align-items:center;gap:8px">' +
+                '<span class="toggle-arrow" id="arr-' + catBodyId + '">▾</span>' +
+                '<span style="font-size:13px;font-weight:700">' + cat.name + '</span>' +
+              '</div>' +
+              '<span style="font-size:12px;color:#6b7280">' + catChecked + '/' + catSteps.length + '</span>' +
+            '</div>' +
+            '<div id="' + catBodyId + '" style="padding:4px 16px 8px 48px">';
+
+          catItems.forEach(function(item) {
+            var itemSteps = allSteps.filter(function(s) { return s.item_id === item.id; });
+            var stepsHtml = itemSteps.map(function(step) {
+              var isChecked = checkedStepIds.indexOf(step.id) !== -1;
+              return '<span style="display:inline-block;padding:3px 10px;border-radius:20px;' +
+                'border:1.5px solid ' + (isChecked ? '#495e9f' : '#e5e7eb') + ';' +
+                'font-size:11px;color:' + (isChecked ? '#495e9f' : '#9ca3af') + ';' +
+                'background:' + (isChecked ? '#eef0fa' : '#fff') + ';' +
+                'font-weight:' + (isChecked ? '700' : '400') + '">' +
+                (isChecked ? '✓ ' : '') + step.name +
+              '</span>';
+            }).join('');
+
+            html += '<div style="padding:8px 0;border-bottom:1px solid #f9fafb">' +
+              '<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#1a1a2e">' + item.name + '</div>' +
+              '<div style="display:flex;gap:6px;flex-wrap:wrap">' + stepsHtml + '</div>' +
+            '</div>';
+          });
+
+          html += '</div></div>'; // catBodyId close, toggle-cat close
+        });
+
+        html += '</div></div>'; // gradeBodyId close, toggle-grade close
+      }
+
+      document.getElementById('check-list').innerHTML = html || '<div class="loading-text">データがありません</div>';
     }
 
     // テスト受験履歴を描画する
