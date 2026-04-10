@@ -1491,8 +1491,9 @@
                 (itemRowsHtml.trim()
                   ? itemRowsHtml
                   : '<div style="font-size:13px;color:#9ca3af;padding:4px 0 8px">項目がまだ登録されていません</div>') +
-                '<div class="form-row" style="margin-top:12px">' +
+                '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
                   '<button class="btn btn-secondary btn-sm" onclick="openAddItemModal(' + cat.id + ')">＋ 項目を追加</button>' +
+                  '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="openCsvModal(\'item\',' + cat.id + ')">📋 CSVで一括追加</button>' +
                 '</div>' +
               '</div>' +
             '</div>' +
@@ -1867,10 +1868,12 @@
     var csvParsedData = [];
     var csvDepts = [];
     var csvAreas = [];
+    var csvItemCatId = null; // 項目一括追加時のカテゴリID
 
-    async function openCsvModal(type) {
+    async function openCsvModal(type, extraId) {
       csvImportType = type;
       csvParsedData = [];
+      csvItemCatId = extraId || null;
 
       // 部署・エリアのマスタを事前取得
       var { data: depts } = await client.from('departments').select('id, name').order('id');
@@ -1888,7 +1891,8 @@
       var titles = {
         member:   'メンバーをCSVで一括追加',
         category: 'カテゴリをCSVで一括追加',
-        store:    '店舗をCSVで一括追加'
+        store:    '店舗をCSVで一括追加',
+        item:     '項目をCSVで一括追加'
       };
       document.getElementById('csv-modal-title').textContent = titles[type];
 
@@ -1901,7 +1905,10 @@
           '① カテゴリ名　② 部署名',
         store:
           '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
-          '① 店舗名　② エリア名'
+          '① 店舗名　② エリア名',
+        item:
+          '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
+          '① 項目名　② 等級（0〜5）　③ ステップ1　④ ステップ2　⑤ ステップ3 …（ステップは列を増やして何個でも追加可）'
       };
       document.getElementById('csv-col-desc').innerHTML = descs[type];
 
@@ -1960,9 +1967,16 @@
       } else if (csvImportType === 'category') {
         headers = ['カテゴリ名', '部署名'];
         rows = csvParsedData.map(function(r) { return [r[0]||'', r[1]||'']; });
-      } else {
+      } else if (csvImportType === 'store') {
         headers = ['店舗名', 'エリア名'];
         rows = csvParsedData.map(function(r) { return [r[0]||'', r[1]||'']; });
+      } else {
+        // item
+        headers = ['項目名', '等級', 'ステップ数'];
+        rows = csvParsedData.map(function(r) {
+          var stepCount = r.slice(2).filter(function(s) { return s.trim(); }).length;
+          return [r[0]||'', (r[1]||'0') + '等級', stepCount > 0 ? stepCount + '個' : '—'];
+        });
       }
 
       var thead = '<thead><tr>' + headers.map(function(h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead>';
@@ -2057,6 +2071,42 @@
           if (error) { errors.push((i+1) + '行目（' + name + '）：' + error.message); continue; }
           successCount++;
         }
+
+      } else if (csvImportType === 'item') {
+        for (var i = 0; i < csvParsedData.length; i++) {
+          var r = csvParsedData[i];
+          var name  = (r[0]||'').trim();
+          var grade = parseInt(r[1]) || 0;
+          // 3列目以降をステップとして扱う（空欄は除外）
+          var steps = r.slice(2).map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+
+          if (!name) { errors.push((i+1) + '行目：項目名は必須です'); continue; }
+
+          // 項目を追加
+          var { data: itemData, error: itemErr } = await client
+            .from('check_items')
+            .insert({ name: name, grade: grade, category_id: csvItemCatId })
+            .select().limit(1);
+          if (itemErr) { errors.push((i+1) + '行目（' + name + '）：' + itemErr.message); continue; }
+
+          // RLS で SELECT が空になる場合のフォールバック
+          var itemId = (itemData && itemData[0]) ? itemData[0].id : null;
+          if (!itemId) {
+            var { data: fetched } = await client.from('check_items').select('id')
+              .eq('name', name).eq('category_id', csvItemCatId).order('id', { ascending: false }).limit(1);
+            itemId = fetched && fetched[0] ? fetched[0].id : null;
+          }
+
+          // ステップを一括追加
+          if (itemId && steps.length > 0) {
+            var stepsToInsert = steps.map(function(stepName, idx) {
+              return { item_id: itemId, name: stepName, order_no: idx + 1 };
+            });
+            var { error: stepErr } = await client.from('check_steps').insert(stepsToInsert);
+            if (stepErr) { console.error('ステップ保存エラー:', stepErr.message); }
+          }
+          successCount++;
+        }
       }
 
       // 結果表示
@@ -2081,6 +2131,7 @@
         if (csvImportType === 'member')   loadMembers();
         if (csvImportType === 'category') loadContent();
         if (csvImportType === 'store')    loadOrg();
+        if (csvImportType === 'item')     loadContent();
       }
     }
 
