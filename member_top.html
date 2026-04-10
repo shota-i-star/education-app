@@ -24,29 +24,34 @@
     .btn-logout { padding: 5px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; color: #fff; font-size: 12px; cursor: pointer; font-family: 'M PLUS Rounded 1c', sans-serif; transition: background 0.15s; }
     .btn-logout:hover { background: rgba(255,255,255,0.25); }
 
-    .layout { display: flex; max-width: 900px; margin: 0 auto; padding: 24px 16px; gap: 20px; }
+    .layout { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 
-    .sidebar { width: 200px; flex-shrink: 0; }
-    .sidebar-title { font-size: 11px; font-weight: 500; color: #6b7280; margin-bottom: 8px; padding-left: 4px; }
-    .sidebar-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; }
-    .sidebar-item { display: block; width: 100%; padding: 12px 16px; background: none; border: none; border-bottom: 1px solid #f0f4f8; text-align: left; font-size: 13px; cursor: pointer; color: #6b7280; transition: background 0.15s; }
-    .sidebar-item:last-child { border-bottom: none; }
-    .sidebar-item:hover { background: #f0f4f8; }
-    .sidebar-item.active { background: #eef0fa; color: #495e9f; font-weight: 500; border-left: 3px solid #495e9f; }
-    .sidebar-tag { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
-    .tag-current { background: #495e9f; color: #fff; }
-    .tag-done { background: #e5e7eb; color: #9ca3af; }
-
-    .main-area { flex: 1; min-width: 0; }
+    .main-area { min-width: 0; }
     .greeting { margin-bottom: 20px; }
     .greeting h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
     .greeting p { font-size: 13px; color: #6b7280; }
 
-    .progress-card { background: #fff; border-radius: 12px; padding: 18px 22px; margin-bottom: 20px; border: 1px solid #e5e7eb; }
-    .progress-card .label { font-size: 12px; color: #6b7280; margin-bottom: 6px; }
-    .progress-card .rate { font-size: 26px; font-weight: 600; color: #495e9f; margin-bottom: 8px; }
-    .bar-bg { background: #e5e7eb; border-radius: 99px; height: 8px; }
-    .bar-fill { background: #495e9f; border-radius: 99px; height: 8px; transition: width 0.4s ease; }
+    /* 2軸進捗カード */
+    .progress-card { background: #fff; border-radius: 12px; padding: 18px 22px; margin-bottom: 14px; border: 1px solid #e5e7eb; display: flex; gap: 24px; }
+    .prog-block { flex: 1; min-width: 0; }
+    .prog-divider { width: 1px; background: #e5e7eb; flex-shrink: 0; }
+    .progress-card .label { font-size: 11px; color: #6b7280; margin-bottom: 4px; }
+    .progress-card .rate { font-size: 24px; font-weight: 600; color: #495e9f; margin-bottom: 6px; }
+    .progress-card .rate-gray { color: #9ca3af; }
+    .bar-bg { background: #e5e7eb; border-radius: 99px; height: 7px; }
+    .bar-fill { background: #495e9f; border-radius: 99px; height: 7px; transition: width 0.4s ease; }
+    .bar-fill-gray { background: #b0b8c8; }
+
+    /* 等級タブ（進捗とコンテンツの間） */
+    .grade-tabs-wrap { margin-bottom: 16px; }
+    .sidebar-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; display: flex; flex-direction: row; }
+    .sidebar-item { flex: 1; text-align: center; padding: 10px 8px; background: none; border: none; border-right: 1px solid #f0f4f8; font-size: 13px; cursor: pointer; color: #6b7280; transition: background 0.15s; white-space: nowrap; }
+    .sidebar-item:last-child { border-right: none; }
+    .sidebar-item:hover { background: #f0f4f8; }
+    .sidebar-item.active { background: #eef0fa; color: #495e9f; font-weight: 500; border-bottom: 3px solid #495e9f; }
+    .sidebar-tag { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
+    .tag-current { background: #495e9f; color: #fff; }
+    .tag-done { background: #e5e7eb; color: #9ca3af; }
 
     .panel { display: none; }
     .panel.active { display: block; }
@@ -95,32 +100,14 @@
       .grade-badge { font-size: 10px; padding: 2px 7px; white-space: nowrap; }
       .btn-logout { padding: 4px 9px; font-size: 11px; white-space: nowrap; }
 
-      /* レイアウト：縦積みに変更 */
-      .layout { flex-direction: column; padding: 12px 12px; gap: 12px; }
+      /* レイアウト */
+      .layout { padding: 12px; }
+      .progress-card { gap: 14px; padding: 14px 16px; margin-bottom: 10px; }
+      .prog-divider { width: 1px; }
 
-      /* サイドバー：均等幅タブ（スクロールなし） */
-      .sidebar { width: 100%; }
-      .sidebar-title { display: none; }
-      .sidebar-card {
-        display: flex;
-        flex-direction: row;
-        overflow: hidden;
-        border-radius: 12px;
-      }
-      .sidebar-item {
-        flex: 1;
-        text-align: center;
-        white-space: nowrap;
-        border-bottom: none;
-        border-right: 1px solid #f0f4f8;
-        padding: 10px 4px;
-        font-size: 12px;
-      }
-      .sidebar-item:last-child { border-right: none; }
-      .sidebar-item.active {
-        border-left: none;
-        border-bottom: 3px solid #495e9f;
-      }
+      /* 等級タブ：スマホでさらに小さく */
+      .sidebar-item { padding: 10px 4px; font-size: 12px; }
+      .grade-tabs-wrap { margin-bottom: 12px; }
 
       /* メインエリア */
       .greeting { margin-bottom: 14px; }
@@ -157,23 +144,32 @@
   </header>
 
   <div class="layout">
-    <div class="sidebar">
-      <div class="sidebar-title">等級を切り替え</div>
-      <div class="sidebar-card" id="sidebar-grades">
-        <div class="loading-text" style="padding:16px;font-size:12px">読み込み中...</div>
-      </div>
-    </div>
-
     <div class="main-area">
       <div class="greeting">
         <h1 id="greeting-name">こんにちは</h1>
         <p id="greeting-grade">現在の等級：－</p>
       </div>
 
+      <!-- 2軸進捗カード -->
       <div class="progress-card">
-        <div class="label">全体の進捗</div>
-        <div class="rate" id="progress-rate">－</div>
-        <div class="bar-bg"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
+        <div class="prog-block">
+          <div class="label">全体進捗率</div>
+          <div class="rate rate-gray" id="progress-rate-all">－%</div>
+          <div class="bar-bg"><div class="bar-fill bar-fill-gray" id="progress-bar-all" style="width:0%"></div></div>
+        </div>
+        <div class="prog-divider"></div>
+        <div class="prog-block">
+          <div class="label" id="progress-grade-label">現在の等級の進捗</div>
+          <div class="rate" id="progress-rate">－%</div>
+          <div class="bar-bg"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- 等級タブ（進捗とコンテンツの間） -->
+      <div class="grade-tabs-wrap">
+        <div class="sidebar-card" id="sidebar-grades">
+          <div class="loading-text" style="padding:12px;font-size:12px">読み込み中...</div>
+        </div>
       </div>
 
       <div id="panel-area">
@@ -222,6 +218,9 @@
 
       // サイドバーを描画する
       renderSidebar(profile.grade);
+
+      // 全体進捗率を読み込む
+      loadOverallProgress();
 
       // コンテンツを読み込む
       loadContent(profile.grade);
@@ -381,6 +380,7 @@
 
       // ★修正①：チェック時は固定メッセージを渡す
       showToast('保存しました ✓');
+      loadOverallProgress(); // 全体進捗率を更新する
       loadContent(CURRENT_VIEW_GRADE, true); // 白フラッシュなしで再描画する
     }
 
@@ -394,6 +394,31 @@
     }
 
     // ============================================
+    // 全体進捗率（全等級）を計算して表示する
+    // ============================================
+    async function loadOverallProgress() {
+      var { data: allItems } = await client.from('check_items').select('id');
+      var { data: allSteps } = await client.from('check_steps').select('id, item_id');
+      var { data: prog }     = await client
+        .from('check_progress')
+        .select('step_id')
+        .eq('user_id', CURRENT_USER)
+        .not('step_id', 'is', null);
+
+      var allItemIds  = (allItems || []).map(function(i) { return i.id; });
+      var stepIds     = (allSteps || []).filter(function(s) {
+        return allItemIds.indexOf(s.item_id) !== -1;
+      }).map(function(s) { return s.id; });
+      var checkedAll  = (prog || []).filter(function(p) {
+        return stepIds.indexOf(p.step_id) !== -1;
+      }).length;
+
+      var rate = stepIds.length > 0 ? Math.round(checkedAll / stepIds.length * 100) : 0;
+      document.getElementById('progress-rate-all').textContent = rate + '%';
+      document.getElementById('progress-bar-all').style.width  = rate + '%';
+    }
+
+    // ============================================
     // 進捗率を更新して100%なら等級アップ申請する
     // ============================================
     async function updateProgress(grade, checkedStepIds, allStepIds) {
@@ -401,6 +426,7 @@
         ? Math.round(checkedStepIds.length / allStepIds.length * 100)
         : 0;
 
+      document.getElementById('progress-grade-label').textContent = grade + '等級の進捗';
       document.getElementById('progress-rate').textContent = rate + '%';
       document.getElementById('progress-bar').style.width = rate + '%';
 
