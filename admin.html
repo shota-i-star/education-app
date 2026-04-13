@@ -113,6 +113,11 @@
     .cat-sortable.drag-over-bottom { border-bottom: 3px solid #495e9f !important; }
     .drag-handle { cursor: grab; font-size: 16px; color: #9ca3af; user-select: none; padding: 0 4px; }
     .drag-handle:active { cursor: grabbing; }
+    /* 項目行のD&D用 */
+    .item-sortable { transition: opacity 0.2s; }
+    .item-sortable.dragging { opacity: 0.35; }
+    .item-sortable.drag-over-top td { border-top: 3px solid #495e9f !important; }
+    .item-sortable.drag-over-bottom td { border-bottom: 3px solid #495e9f !important; }
 
     /* 部署カード用スタイル */
     .dept-card { background: #fff; border-radius: 12px; border: 2px solid #495e9f; margin-bottom: 20px; overflow: hidden; }
@@ -1463,6 +1468,78 @@
       }
     }
 
+    // ============================================
+    // 項目（check_items）のドラッグ＆ドロップ並べ替え
+    // 同じカテゴリ・同じ等級のグループ内でのみ並べ替え可能
+    // ============================================
+    var itemDragSrcEl = null;
+
+    function itemDragStart(e) {
+      var row = e.target.closest('.item-sortable');
+      if (!row) return;
+      itemDragSrcEl = row;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.stopPropagation();
+    }
+
+    function itemDragOver(e) {
+      var row = e.target.closest('.item-sortable');
+      if (!row || !itemDragSrcEl || row === itemDragSrcEl) return;
+      // 同じカテゴリ＋同じ等級のみ
+      if (row.getAttribute('data-cat-id') !== itemDragSrcEl.getAttribute('data-cat-id')) return;
+      if (row.getAttribute('data-grade')  !== itemDragSrcEl.getAttribute('data-grade'))  return;
+      e.preventDefault();
+      e.stopPropagation();
+      var rect = row.getBoundingClientRect();
+      row.classList.remove('drag-over-top', 'drag-over-bottom');
+      row.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drag-over-top' : 'drag-over-bottom');
+    }
+
+    function itemDragLeave(e) {
+      var row = e.target.closest('.item-sortable');
+      if (row) row.classList.remove('drag-over-top', 'drag-over-bottom');
+    }
+
+    function itemDragEnd(e) {
+      document.querySelectorAll('.item-sortable').forEach(function(el) {
+        el.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+      });
+      itemDragSrcEl = null;
+    }
+
+    function itemDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var targetRow = e.target.closest('.item-sortable');
+      if (!targetRow || !itemDragSrcEl || targetRow === itemDragSrcEl) return;
+      if (targetRow.getAttribute('data-cat-id') !== itemDragSrcEl.getAttribute('data-cat-id')) return;
+      if (targetRow.getAttribute('data-grade')  !== itemDragSrcEl.getAttribute('data-grade'))  return;
+      var parent = targetRow.parentNode;
+      var rect = targetRow.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) {
+        parent.insertBefore(itemDragSrcEl, targetRow);
+      } else {
+        parent.insertBefore(itemDragSrcEl, targetRow.nextSibling);
+      }
+      targetRow.classList.remove('drag-over-top', 'drag-over-bottom');
+      itemDragSrcEl.classList.remove('dragging');
+      saveItemOrder(itemDragSrcEl.getAttribute('data-cat-id'));
+      itemDragSrcEl = null;
+    }
+
+    async function saveItemOrder(catId) {
+      // カテゴリ配下のすべての項目行を画面上の並び順に取得（等級グループを超えた通し番号で sort_order を振る）
+      var rows = document.querySelectorAll('.item-sortable[data-cat-id="' + catId + '"]');
+      for (var i = 0; i < rows.length; i++) {
+        await adminClient.from('check_items')
+          .update({ sort_order: i })
+          .eq('id', parseInt(rows[i].getAttribute('data-item-id')));
+      }
+      // No. 表示を更新するため再描画
+      loadContent();
+    }
+
     function toggleSection(bodyId) {
       var el = document.getElementById(bodyId);
       if (!el) return;
@@ -1501,7 +1578,13 @@
       // カテゴリ・中間テーブル・項目・ステップを取得
       var { data: categories } = await client.from('categories').select('id, name, sort_order').order('id');
       var { data: catDepts }   = await client.from('category_departments').select('category_id, department_id');
-      var { data: items }      = await client.from('check_items').select('id, name, grade, category_id').order('id');
+      var { data: items }      = await client.from('check_items').select('id, name, grade, category_id, sort_order').order('id');
+      // sort_order でソート（null は末尾・同値は id 昇順）
+      (items || []).sort(function(a, b) {
+        var sa = a.sort_order != null ? a.sort_order : 999999;
+        var sb = b.sort_order != null ? b.sort_order : 999999;
+        return sa !== sb ? sa - sb : a.id - b.id;
+      });
       var { data: steps }      = await client.from('check_steps').select('id, item_id, name, order_no').order('order_no');
 
       var grades = [0, 1, 2, 3, 4, 5];
@@ -1527,9 +1610,9 @@
           var catBodyId = 'content-cat-' + cat.id;
           var catAllItems = (items || []).filter(function(i) { return i.category_id === cat.id; });
 
-          // カテゴリ内でIDの昇順にNo.を付与
+          // カテゴリ内で sort_order 順にNo.を付与（items はすでにソート済み）
           var itemNoMap = {};
-          catAllItems.slice().sort(function(a, b) { return a.id - b.id; }).forEach(function(item, idx) {
+          catAllItems.forEach(function(item, idx) {
             itemNoMap[item.id] = idx + 1;
           });
 
@@ -1547,8 +1630,12 @@
                 '</span>';
               }).join('');
 
-              return '<tr>' +
+              return '<tr class="item-sortable" draggable="true"' +
+                ' data-item-id="' + item.id + '" data-cat-id="' + cat.id + '" data-grade="' + grade + '"' +
+                ' ondragstart="itemDragStart(event)" ondragover="itemDragOver(event)"' +
+                ' ondrop="itemDrop(event)" ondragend="itemDragEnd(event)" ondragleave="itemDragLeave(event)">' +
                 '<td>' +
+                  '<span class="drag-handle" title="ドラッグして並べ替え" style="margin-right:4px">☰</span>' +
                   '<span style="font-size:11px;color:#9ca3af;margin-right:4px;font-weight:600">No.' + itemNoMap[item.id] + '</span>' +
                   item.name +
                 '</td>' +
@@ -1901,9 +1988,29 @@
     }
 
     async function deleteItem(itemId, name) {
-      if (!confirm(name + ' を削除しますか？')) return;
-      var { error } = await client.from('check_items').delete().eq('id', itemId);
+      if (!confirm(name + ' を削除しますか？\n関連するステップ・進捗も削除されます。')) return;
+
+      // 1. この項目に紐づくステップ ID を取得
+      var { data: stepRows } = await adminClient
+        .from('check_steps').select('id').eq('item_id', itemId);
+      var stepIds = (stepRows || []).map(function(s) { return s.id; });
+
+      // 2. check_progress を削除（step_id 参照分）
+      if (stepIds.length > 0) {
+        var { error: progErr } = await adminClient
+          .from('check_progress').delete().in('step_id', stepIds);
+        if (progErr) { alert('進捗削除エラー：' + progErr.message); return; }
+      }
+
+      // 3. check_steps を削除
+      var { error: stepErr } = await adminClient
+        .from('check_steps').delete().eq('item_id', itemId);
+      if (stepErr) { alert('ステップ削除エラー：' + stepErr.message); return; }
+
+      // 4. check_items を削除
+      var { error } = await adminClient.from('check_items').delete().eq('id', itemId);
       if (error) { alert('削除エラー：' + error.message); return; }
+
       showToast(name + ' を削除しました');
       loadContent();
     }
