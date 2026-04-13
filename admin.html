@@ -113,11 +113,11 @@
     .cat-sortable.drag-over-bottom { border-bottom: 3px solid #495e9f !important; }
     .drag-handle { cursor: grab; font-size: 16px; color: #9ca3af; user-select: none; padding: 0 4px; }
     .drag-handle:active { cursor: grabbing; }
-    /* 項目行のD&D用 */
+    /* カテゴリ編集モーダル内の項目D&D用 */
     .item-sortable { transition: opacity 0.2s; }
     .item-sortable.dragging { opacity: 0.35; }
-    .item-sortable.drag-over-top td { border-top: 3px solid #495e9f !important; }
-    .item-sortable.drag-over-bottom td { border-bottom: 3px solid #495e9f !important; }
+    .item-sortable.drag-over-top { border-top: 3px solid #495e9f !important; }
+    .item-sortable.drag-over-bottom { border-bottom: 3px solid #495e9f !important; }
 
     /* 部署カード用スタイル */
     .dept-card { background: #fff; border-radius: 12px; border: 2px solid #495e9f; margin-bottom: 20px; overflow: hidden; }
@@ -353,11 +353,17 @@
 
   <!-- カテゴリ名編集モーダル -->
   <div class="modal-overlay" id="edit-category-modal">
-    <div class="modal">
-      <h3>カテゴリ名を編集</h3>
+    <div class="modal" style="max-width:560px">
+      <h3>カテゴリを編集</h3>
       <div class="modal-field">
-        <label>新しいカテゴリ名</label>
+        <label>カテゴリ名</label>
         <input type="text" id="edit-category-name" placeholder="カテゴリ名を入力">
+      </div>
+      <div class="modal-field">
+        <label>項目の並び順（ドラッグして並べ替え）</label>
+        <div id="edit-category-items" style="max-height:380px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px;background:#fafbfc">
+          <div style="font-size:13px;color:#9ca3af;padding:8px">読み込み中...</div>
+        </div>
       </div>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal('edit-category-modal')">キャンセル</button>
@@ -1529,14 +1535,18 @@
     }
 
     async function saveItemOrder(catId) {
-      // カテゴリ配下のすべての項目行を画面上の並び順に取得（等級グループを超えた通し番号で sort_order を振る）
-      var rows = document.querySelectorAll('.item-sortable[data-cat-id="' + catId + '"]');
+      // モーダル内のすべての項目要素を画面上の並び順に取得（通し番号で sort_order を振る）
+      var rows = document.querySelectorAll('#edit-category-items .item-sortable[data-cat-id="' + catId + '"]');
       for (var i = 0; i < rows.length; i++) {
         await adminClient.from('check_items')
           .update({ sort_order: i })
           .eq('id', parseInt(rows[i].getAttribute('data-item-id')));
       }
-      // No. 表示を更新するため再描画
+      // モーダル内のNo.を振り直すため再描画
+      if (String(editCategoryTargetId) === String(catId)) {
+        await renderEditCategoryItems(catId);
+      }
+      // 背面の管理画面も最新化
       loadContent();
     }
 
@@ -1630,12 +1640,8 @@
                 '</span>';
               }).join('');
 
-              return '<tr class="item-sortable" draggable="true"' +
-                ' data-item-id="' + item.id + '" data-cat-id="' + cat.id + '" data-grade="' + grade + '"' +
-                ' ondragstart="itemDragStart(event)" ondragover="itemDragOver(event)"' +
-                ' ondrop="itemDrop(event)" ondragend="itemDragEnd(event)" ondragleave="itemDragLeave(event)">' +
+              return '<tr>' +
                 '<td>' +
-                  '<span class="drag-handle" title="ドラッグして並べ替え" style="margin-right:4px">☰</span>' +
                   '<span style="font-size:11px;color:#9ca3af;margin-right:4px;font-weight:600">No.' + itemNoMap[item.id] + '</span>' +
                   item.name +
                 '</td>' +
@@ -1855,19 +1861,63 @@
     // ============================================
     var editCategoryTargetId = null;
 
-    function openEditCategoryModal(catId, currentName) {
+    async function openEditCategoryModal(catId, currentName) {
       editCategoryTargetId = catId;
       document.getElementById('edit-category-name').value = currentName;
       document.getElementById('edit-category-modal').classList.add('show');
+      // 項目一覧を読み込み
+      await renderEditCategoryItems(catId);
+    }
+
+    // モーダル内の項目一覧（等級グループごと・D&D並べ替え可）を描画
+    async function renderEditCategoryItems(catId) {
+      var container = document.getElementById('edit-category-items');
+      container.innerHTML = '<div style="font-size:13px;color:#9ca3af;padding:8px">読み込み中...</div>';
+      var { data: items } = await adminClient
+        .from('check_items').select('id, name, grade, sort_order')
+        .eq('category_id', catId);
+      (items || []).sort(function(a, b) {
+        var sa = a.sort_order != null ? a.sort_order : 999999;
+        var sb = b.sort_order != null ? b.sort_order : 999999;
+        return sa !== sb ? sa - sb : a.id - b.id;
+      });
+      // No. をカテゴリ全体で連番付与
+      var itemNoMap = {};
+      (items || []).forEach(function(it, idx) { itemNoMap[it.id] = idx + 1; });
+
+      if (!items || items.length === 0) {
+        container.innerHTML = '<div style="font-size:13px;color:#9ca3af;padding:8px">項目がまだ登録されていません</div>';
+        return;
+      }
+
+      var grades = [0, 1, 2, 3, 4, 5];
+      var html = '';
+      grades.forEach(function(g) {
+        var gItems = (items || []).filter(function(i) { return i.grade === g; });
+        if (gItems.length === 0) return;
+        html += '<div style="font-size:12px;font-weight:700;color:#6b7280;padding:8px 4px 4px">' + g + '等級</div>';
+        gItems.forEach(function(item) {
+          html += '<div class="item-sortable" draggable="true"' +
+            ' data-item-id="' + item.id + '" data-cat-id="' + catId + '" data-grade="' + g + '"' +
+            ' ondragstart="itemDragStart(event)" ondragover="itemDragOver(event)"' +
+            ' ondrop="itemDrop(event)" ondragend="itemDragEnd(event)" ondragleave="itemDragLeave(event)"' +
+            ' style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px;cursor:move">' +
+            '<span class="drag-handle" title="ドラッグして並べ替え">☰</span>' +
+            '<span style="font-size:11px;color:#9ca3af;font-weight:600;min-width:40px">No.' + itemNoMap[item.id] + '</span>' +
+            '<span style="font-size:13px;color:#1a1a2e">' + item.name + '</span>' +
+            '</div>';
+        });
+      });
+      container.innerHTML = html;
     }
 
     async function saveCategoryName() {
       var newName = document.getElementById('edit-category-name').value.trim();
       if (!newName) { alert('カテゴリ名を入力してください'); return; }
-      var { error } = await client.from('categories').update({ name: newName }).eq('id', editCategoryTargetId);
+      var { error } = await adminClient.from('categories').update({ name: newName }).eq('id', editCategoryTargetId);
       if (error) { alert('更新エラー：' + error.message); return; }
       closeModal('edit-category-modal');
-      showToast('カテゴリ名を更新しました ✓');
+      showToast('カテゴリを更新しました ✓');
       loadContent();
     }
 

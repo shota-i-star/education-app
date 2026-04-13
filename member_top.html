@@ -62,15 +62,26 @@
     .panel { display: none; }
     .panel.active { display: block; }
 
-    .category { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow: hidden; }
-    .category-header { padding: 14px 20px; background: #495e9f; color: #fff; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; transition: background 0.15s; }
+    .category { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 16px; }
+    .category-header {
+      padding: 14px 20px; background: #495e9f; color: #fff;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; user-select: none; transition: background 0.15s;
+      border-radius: 12px 12px 0 0;
+      /* スクロール時、前のカテゴリヘッダーは押し上げられ、次のカテゴリのヘッダーに切り替わる */
+      position: sticky;
+      top: var(--cat-sticky-top, 158px);
+      z-index: 6;
+    }
     .category-header:hover { background: #3f528c; }
     .category-header h2 { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
     .category-header .cat-progress { font-size: 12px; opacity: 0.85; }
     .cat-arrow { display: inline-block; font-size: 12px; transition: transform 0.2s; }
     .cat-arrow.closed { transform: rotate(-90deg); }
-    .category-body { display: block; }
+    .category-body { display: block; border-radius: 0 0 12px 12px; overflow: hidden; }
     .category-body.closed { display: none; }
+    /* カテゴリ閉じ状態ではヘッダーを全角丸に */
+    .category:has(.category-body.closed) .category-header { border-radius: 12px; }
 
     .item-list { padding: 4px 0; }
     .item { padding: 14px 20px; border-bottom: 1px solid #f0f4f8; }
@@ -547,6 +558,23 @@
       t.classList.add('show');
       setTimeout(function() { t.classList.remove('show'); }, 2000);
     }
+
+    // ============================================
+    // カテゴリヘッダー sticky の top 位置を動的計算
+    // （ヘッダー高 + 進捗バー高 を合算して CSS 変数にセット）
+    // ============================================
+    function updateCatStickyTop() {
+      var header = document.querySelector('header');
+      var wrap   = document.querySelector('.sticky-progress-wrap');
+      if (!header || !wrap) return;
+      var total = header.offsetHeight + wrap.offsetHeight;
+      document.documentElement.style.setProperty('--cat-sticky-top', total + 'px');
+    }
+    window.addEventListener('load',   updateCatStickyTop);
+    window.addEventListener('resize', updateCatStickyTop);
+    // 描画完了後にも再計算
+    setTimeout(updateCatStickyTop, 300);
+    setTimeout(updateCatStickyTop, 1000);
 
     initUser();
   </script>
