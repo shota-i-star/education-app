@@ -33,12 +33,16 @@
     .greeting h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
     .greeting p { font-size: 13px; color: #6b7280; }
 
+    /* スクロール追従の進捗バー（sticky） */
+    .sticky-progress-wrap { position: sticky; top: 56px; z-index: 9; background: #f0f4f8; padding: 14px 16px 4px; border-bottom: 1px solid #e5e7eb; }
+    .sticky-progress-inner { max-width: 900px; margin: 0 auto; }
+
     /* 2軸進捗カード */
-    .progress-card { background: #fff; border-radius: 12px; padding: 18px 22px; margin-bottom: 14px; border: 1px solid #e5e7eb; display: flex; gap: 24px; }
+    .progress-card { background: #fff; border-radius: 12px; padding: 14px 20px; margin-bottom: 10px; border: 1px solid #e5e7eb; display: flex; gap: 24px; }
     .prog-block { flex: 1; min-width: 0; }
     .prog-divider { width: 1px; background: #e5e7eb; flex-shrink: 0; }
     .progress-card .label { font-size: 11px; color: #6b7280; margin-bottom: 4px; }
-    .progress-card .rate { font-size: 24px; font-weight: 600; color: #495e9f; margin-bottom: 6px; }
+    .progress-card .rate { font-size: 20px; font-weight: 600; color: #495e9f; margin-bottom: 6px; }
     .progress-card .rate-gray { color: #9ca3af; }
     .bar-bg { background: #e5e7eb; border-radius: 99px; height: 7px; }
     .bar-fill { background: #495e9f; border-radius: 99px; height: 7px; transition: width 0.4s ease; }
@@ -59,9 +63,14 @@
     .panel.active { display: block; }
 
     .category { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 16px; overflow: hidden; }
-    .category-header { padding: 14px 20px; background: #495e9f; color: #fff; display: flex; justify-content: space-between; align-items: center; }
-    .category-header h2 { font-size: 15px; font-weight: 500; }
+    .category-header { padding: 14px 20px; background: #495e9f; color: #fff; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; transition: background 0.15s; }
+    .category-header:hover { background: #3f528c; }
+    .category-header h2 { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
     .category-header .cat-progress { font-size: 12px; opacity: 0.85; }
+    .cat-arrow { display: inline-block; font-size: 12px; transition: transform 0.2s; }
+    .cat-arrow.closed { transform: rotate(-90deg); }
+    .category-body { display: block; }
+    .category-body.closed { display: none; }
 
     .item-list { padding: 4px 0; }
     .item { padding: 14px 20px; border-bottom: 1px solid #f0f4f8; }
@@ -104,7 +113,9 @@
 
       /* レイアウト */
       .layout { padding: 12px; }
-      .progress-card { gap: 14px; padding: 14px 16px; margin-bottom: 10px; }
+      .sticky-progress-wrap { top: 50px; padding: 10px 12px 2px; }
+      .progress-card { gap: 14px; padding: 10px 14px; margin-bottom: 6px; }
+      .progress-card .rate { font-size: 18px; margin-bottom: 4px; }
       .prog-divider { width: 1px; }
 
       /* 等級タブ：スマホでさらに小さく */
@@ -145,14 +156,9 @@
     </div>
   </header>
 
-  <div class="layout">
-    <div class="main-area">
-      <div class="greeting">
-        <h1 id="greeting-name">こんにちは</h1>
-        <p id="greeting-grade">現在の等級：－</p>
-      </div>
-
-      <!-- 2軸進捗カード -->
+  <!-- 2軸進捗カード（ヘッダー直下にスクロール追従表示） -->
+  <div class="sticky-progress-wrap">
+    <div class="sticky-progress-inner">
       <div class="progress-card">
         <div class="prog-block">
           <div class="label">全体進捗率</div>
@@ -165,6 +171,15 @@
           <div class="rate" id="progress-rate">－%</div>
           <div class="bar-bg"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="main-area">
+      <div class="greeting">
+        <h1 id="greeting-name">こんにちは</h1>
+        <p id="greeting-grade">現在の等級：－</p>
       </div>
 
       <!-- 等級タブ（進捗とコンテンツの間） -->
@@ -253,22 +268,46 @@
     // ============================================
     // コンテンツを読み込む
     // ============================================
+    // カテゴリの開閉を切り替える
+    function toggleCategory(bodyId) {
+      var body = document.getElementById(bodyId);
+      var arr  = document.getElementById('arr-' + bodyId);
+      if (!body) return;
+      var isClosed = body.classList.toggle('closed');
+      if (arr) arr.classList.toggle('closed', isClosed);
+    }
+
     async function loadContent(grade, silent) {
       CURRENT_VIEW_GRADE = grade;
       var isPast = grade < CURRENT_GRADE;
       var panelArea = document.getElementById('panel-area');
+
+      // 再描画前に閉じていたカテゴリを記録（silent 再描画時に状態保持）
+      var closedBodyIds = [];
+      if (silent) {
+        panelArea.querySelectorAll('.category-body.closed').forEach(function(el) {
+          closedBodyIds.push(el.id);
+        });
+      }
+
       if (!silent) {
         panelArea.innerHTML = '<div class="loading-text">読み込み中...</div>';
       }
 
       // カテゴリ・項目・ステップを取得する
-      var { data: categories } = await client.from('categories').select('id, name').order('id');
+      var { data: categories } = await client.from('categories').select('id, name, sort_order').order('id');
+      // sort_order でソート（null は末尾・同値は id 昇順）＝ 管理画面と同じ並び
+      (categories || []).sort(function(a, b) {
+        var sa = a.sort_order != null ? a.sort_order : 999999;
+        var sb = b.sort_order != null ? b.sort_order : 999999;
+        return sa !== sb ? sa - sb : a.id - b.id;
+      });
       var { data: items }      = await client.from('check_items').select('id, name, grade, category_id').eq('grade', grade).order('id');
       var { data: steps }      = await client.from('check_steps').select('id, item_id, name, order_no').order('order_no');
 
-      // テストが設定されているか確認する（現在の等級のみ対象）
-      var { data: testSets } = await client.from('test_sets').select('id').eq('grade', grade).limit(1);
-      var hasTest = !isPast && testSets && testSets.length > 0;
+      // テストが設定されているか確認する（カテゴリ×等級ごとに判定）
+      var { data: testSets } = await client.from('test_sets').select('id, category_id, grade').eq('grade', grade);
+      var testCategoryIds = (testSets || []).map(function(t) { return t.category_id; });
 
       // チェック済みステップを取得する
       var { data: progress } = await client
@@ -313,11 +352,13 @@
         });
         var catChecked = catSteps.filter(function(s) { return checkedStepIds.indexOf(s.id) !== -1; }).length;
 
+        var catBodyId = 'cat-body-' + grade + '-' + cat.id;
         html += '<div class="category">' +
-          '<div class="category-header">' +
-            '<h2>' + cat.name + '</h2>' +
+          '<div class="category-header" onclick="toggleCategory(\'' + catBodyId + '\')">' +
+            '<h2><span class="cat-arrow" id="arr-' + catBodyId + '">▼</span>' + cat.name + '</h2>' +
             '<span class="cat-progress">' + catChecked + ' / ' + catSteps.length + ' 完了</span>' +
           '</div>' +
+          '<div class="category-body" id="' + catBodyId + '">' +
           '<div class="item-list">';
 
         catItems.forEach(function(item) {
@@ -350,14 +391,27 @@
 
         html += '</div>';
 
-        if (hasTest) {
+        // このカテゴリ×等級にテストが作成されている場合のみボタンを表示
+        var catHasTest = !isPast && testCategoryIds.indexOf(cat.id) !== -1;
+        if (catHasTest) {
           html += '<button class="test-btn" onclick="window.location.href=\'test_page.html\'">テストを受ける</button>';
         }
 
-        html += '</div>';
+        html += '</div>'; // close .category-body
+        html += '</div>'; // close .category
       });
 
       panelArea.innerHTML = html;
+
+      // 閉じていたカテゴリの状態を復元（silent 再描画時）
+      closedBodyIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.classList.add('closed');
+          var arr = document.getElementById('arr-' + id);
+          if (arr) arr.classList.add('closed');
+        }
+      });
     }
 
     // ============================================
