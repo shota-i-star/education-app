@@ -585,6 +585,14 @@
       <!-- 列説明 -->
       <div class="csv-col-desc" id="csv-col-desc"></div>
 
+      <!-- テンプレートダウンロード -->
+      <div style="margin-bottom:14px">
+        <a id="csv-template-link" href="#" download style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#f0f9f0;color:#2e7d32;border:1px solid #c8e6c9;border-radius:6px;font-size:13px;text-decoration:none;font-family:inherit;">
+          📥 テンプレートをダウンロード
+        </a>
+        <span style="font-size:12px;color:#9ca3af;margin-left:8px">1行目にヘッダーが入ったExcel対応のCSVファイルです</span>
+      </div>
+
       <!-- ファイル選択 -->
       <div style="margin-bottom:14px">
         <label class="file-pick-label" for="csv-file-input">
@@ -1907,6 +1915,18 @@
         item:     '項目をCSVで一括追加'
       };
       document.getElementById('csv-modal-title').textContent = titles[type];
+
+      // テンプレートダウンロードリンクを切り替える
+      var templateFiles = {
+        member:   { href: 'csv/csv_template_members.csv',    name: 'テンプレート_メンバー.csv' },
+        category: { href: 'csv/csv_template_categories.csv', name: 'テンプレート_カテゴリ.csv' },
+        store:    { href: 'csv/csv_template_stores.csv',     name: 'テンプレート_店舗.csv' },
+        item:     { href: 'csv/csv_template_items.csv',      name: 'テンプレート_項目.csv' }
+      };
+      var tpl = templateFiles[type];
+      var link = document.getElementById('csv-template-link');
+      link.href     = tpl.href;
+      link.download = tpl.name;
 
       var descs = {
         member:
