@@ -106,6 +106,14 @@
     .toggle-grade-header { background: #f0f4f8; border-radius: 8px; padding: 8px 14px; margin-bottom: 10px; font-size: 13px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 6px; user-select: none; }
     .toggle-grade-header:hover { background: #e5eaf0; }
 
+    /* ドラッグ＆ドロップ並べ替え */
+    .cat-sortable { transition: opacity 0.2s, transform 0.15s; }
+    .cat-sortable.dragging { opacity: 0.35; transform: scale(0.97); }
+    .cat-sortable.drag-over-top { border-top: 3px solid #495e9f !important; }
+    .cat-sortable.drag-over-bottom { border-bottom: 3px solid #495e9f !important; }
+    .drag-handle { cursor: grab; font-size: 16px; color: #9ca3af; user-select: none; padding: 0 4px; }
+    .drag-handle:active { cursor: grabbing; }
+
     /* 部署カード用スタイル */
     .dept-card { background: #fff; border-radius: 12px; border: 2px solid #495e9f; margin-bottom: 20px; overflow: hidden; }
     .dept-card-header { padding: 14px 20px; background: #495e9f; color: #fff; display: flex; align-items: center; justify-content: space-between; }
@@ -1376,6 +1384,85 @@
     var currentCategoryId = null;
 
     // トグル開閉ユーティリティ
+    /* ===== カテゴリ ドラッグ＆ドロップ並べ替え ===== */
+    var catDragSrcEl = null;
+
+    function catDragStart(e) {
+      var card = e.target.closest('.cat-sortable');
+      if (!card) return;
+      catDragSrcEl = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.getAttribute('data-cat-id'));
+    }
+
+    function catDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      var card = e.target.closest('.cat-sortable');
+      if (!card || card === catDragSrcEl) return;
+      // 同じ部署内のみ並べ替え可能
+      if (card.getAttribute('data-dept-id') !== catDragSrcEl.getAttribute('data-dept-id')) return;
+      // 上半分か下半分かで挿入位置を示す
+      var rect = card.getBoundingClientRect();
+      var midY = rect.top + rect.height / 2;
+      card.classList.remove('drag-over-top', 'drag-over-bottom');
+      if (e.clientY < midY) {
+        card.classList.add('drag-over-top');
+      } else {
+        card.classList.add('drag-over-bottom');
+      }
+    }
+
+    function catDragLeave(e) {
+      var card = e.target.closest('.cat-sortable');
+      if (card) card.classList.remove('drag-over-top', 'drag-over-bottom');
+    }
+
+    function catDragEnd(e) {
+      document.querySelectorAll('.cat-sortable').forEach(function(el) {
+        el.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+      });
+      catDragSrcEl = null;
+    }
+
+    function catDrop(e) {
+      e.preventDefault();
+      var targetCard = e.target.closest('.cat-sortable');
+      if (!targetCard || !catDragSrcEl || targetCard === catDragSrcEl) return;
+      // 同じ部署内のみ
+      if (targetCard.getAttribute('data-dept-id') !== catDragSrcEl.getAttribute('data-dept-id')) return;
+
+      var parent = targetCard.parentNode;
+      var rect = targetCard.getBoundingClientRect();
+      var midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        parent.insertBefore(catDragSrcEl, targetCard);
+      } else {
+        parent.insertBefore(catDragSrcEl, targetCard.nextSibling);
+      }
+
+      // クリーンアップ
+      targetCard.classList.remove('drag-over-top', 'drag-over-bottom');
+      catDragSrcEl.classList.remove('dragging');
+
+      // 新しい並び順を保存
+      saveCategoryOrder(parent, catDragSrcEl.getAttribute('data-dept-id'));
+      catDragSrcEl = null;
+    }
+
+    async function saveCategoryOrder(container, deptId) {
+      var cards = container.querySelectorAll('.cat-sortable[data-dept-id="' + deptId + '"]');
+      var updates = [];
+      cards.forEach(function(card, idx) {
+        updates.push({ id: parseInt(card.getAttribute('data-cat-id')), sort_order: idx });
+      });
+      // Supabase に一括更新
+      for (var i = 0; i < updates.length; i++) {
+        await adminClient.from('categories').update({ sort_order: updates[i].sort_order }).eq('id', updates[i].id);
+      }
+    }
+
     function toggleSection(bodyId) {
       var el = document.getElementById(bodyId);
       if (!el) return;
@@ -1412,7 +1499,7 @@
       }
 
       // カテゴリ・中間テーブル・項目・ステップを取得
-      var { data: categories } = await client.from('categories').select('id, name').order('id');
+      var { data: categories } = await client.from('categories').select('id, name, sort_order').order('id');
       var { data: catDepts }   = await client.from('category_departments').select('category_id, department_id');
       var { data: items }      = await client.from('check_items').select('id, name, grade, category_id').order('id');
       var { data: steps }      = await client.from('check_steps').select('id, item_id, name, order_no').order('order_no');
@@ -1428,6 +1515,12 @@
           .filter(function(cd) { return cd.department_id === dept.id; })
           .map(function(cd) { return cd.category_id; });
         var deptCats = (categories || []).filter(function(c) { return deptCatIds.indexOf(c.id) !== -1; });
+        // sort_order でソート（null は末尾、同値なら id 順）
+        deptCats.sort(function(a, b) {
+          var sa = a.sort_order != null ? a.sort_order : 999999;
+          var sb = b.sort_order != null ? b.sort_order : 999999;
+          return sa !== sb ? sa - sb : a.id - b.id;
+        });
 
         // カテゴリ単位でカードを描画（項目が0件でも必ず表示）
         var catsHtml = deptCats.map(function(cat) {
@@ -1492,9 +1585,10 @@
             ? '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openDuplicateCategoryModal(' + cat.id + ', \'' + cat.name.replace(/'/g,"&#39;") + '\')">複製</button>'
             : '';
 
-          return '<div class="card" style="margin-bottom:12px">' +
+          return '<div class="card cat-sortable" style="margin-bottom:12px" draggable="true" data-cat-id="' + cat.id + '" data-dept-id="' + dept.id + '" ondragstart="catDragStart(event)" ondragover="catDragOver(event)" ondrop="catDrop(event)" ondragend="catDragEnd(event)" ondragleave="catDragLeave(event)">' +
             '<div class="card-header" style="cursor:pointer" onclick="toggleSection(\'' + catBodyId + '\')">' +
               '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">' +
+                '<span class="drag-handle" onclick="event.stopPropagation()" title="ドラッグして並べ替え">☰</span>' +
                 '<span class="toggle-arrow" id="arr-' + catBodyId + '">▾</span>' +
                 '<h3 style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + cat.name + '</h3>' +
                 '<div style="display:flex;gap:5px;flex-shrink:0;margin-left:8px" onclick="event.stopPropagation()">' +
