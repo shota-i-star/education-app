@@ -20,27 +20,28 @@
     header .app-name { font-size: 14px; opacity: 0.85; display: flex; align-items: center; gap: 8px; overflow: visible; }
     header .user-info { display: flex; align-items: center; gap: 12px; font-size: 13px; }
     .grade-badge { background: #bd3c40; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 20px; }
-    .btn-logout { padding: 5px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; color: #fff; font-size: 12px; cursor: pointer; font-family: "BIZ UDPGothic", sans-serif; transition: background 0.15s; }
-    .btn-logout:hover { background: rgba(255,255,255,0.25); }
+    .btn-back { padding: 5px 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; color: #fff; font-size: 12px; cursor: pointer; font-family: "BIZ UDPGothic", sans-serif; text-decoration: none; display: inline-block; }
+    .btn-back:hover { background: rgba(255,255,255,0.25); }
     main { max-width: 680px; margin: 0 auto; padding: 28px 16px 60px; }
     .test-header { margin-bottom: 24px; }
     .test-header .breadcrumb { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
     .test-header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
-    .test-header .meta { font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+    .test-header .meta { font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
     .pass-badge { background: #eef0fa; color: #495e9f; font-size: 12px; padding: 2px 10px; border-radius: 20px; }
     .progress-wrap { margin-bottom: 28px; }
     .progress-info { display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; margin-bottom: 6px; }
     .bar-bg { background: #e5e7eb; border-radius: 99px; height: 6px; }
     .bar-fill { background: #495e9f; border-radius: 99px; height: 6px; transition: width 0.3s; }
     .question-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 20px; overflow: hidden; }
-    .question-head { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 10px; }
+    .question-head { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .q-number { font-size: 13px; font-weight: 500; color: #495e9f; }
     .q-type { font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+    .q-point { font-size: 11px; color: #9ca3af; margin-left: auto; }
     .type-choice { background: #eef0fa; color: #495e9f; }
     .type-truefalse { background: #fef3cd; color: #856404; }
     .type-text { background: #e8f5e9; color: #2e7d32; }
     .question-body { padding: 20px; }
-    .question-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.6; }
+    .question-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.6; white-space: pre-wrap; }
     .choices { display: flex; flex-direction: column; gap: 10px; }
     .choice { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; border: 1.5px solid #e5e7eb; cursor: pointer; font-size: 14px; transition: border-color 0.15s, background 0.15s; }
     .choice:hover { border-color: #495e9f; background: #f5f7ff; }
@@ -48,7 +49,7 @@
     .choice.correct { border-color: #2e7d32; background: #e8f5e9; }
     .choice.wrong { border-color: #bd3c40; background: #fdf0f0; }
     .truefalse { display: flex; gap: 12px; }
-    .tf-btn { flex: 1; padding: 14px; border-radius: 8px; border: 1.5px solid #e5e7eb; background: #fff; font-size: 22px; cursor: pointer; transition: border-color 0.15s, background 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .tf-btn { flex: 1; padding: 14px; border-radius: 8px; border: 1.5px solid #e5e7eb; background: #fff; font-size: 22px; cursor: pointer; transition: border-color 0.15s, background 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: "BIZ UDPGothic", sans-serif; }
     .tf-btn span { font-size: 14px; font-weight: 500; }
     .tf-btn.maru { color: #bd3c40; }
     .tf-btn.batu { color: #495e9f; }
@@ -59,7 +60,7 @@
     .text-input { width: 100%; padding: 12px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-family: "BIZ UDPGothic", sans-serif; font-size: 14px; color: #1a1a2e; resize: vertical; min-height: 100px; transition: border-color 0.15s; outline: none; }
     .text-input:focus { border-color: #495e9f; }
     .text-hint { font-size: 12px; color: #9ca3af; margin-top: 6px; }
-    .text-submitted { background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; font-size: 14px; color: #6b7280; line-height: 1.7; }
+    .text-submitted { background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; font-size: 14px; color: #6b7280; line-height: 1.7; white-space: pre-wrap; }
     .submitted-badge { display: inline-block; background: #e8f5e9; color: #2e7d32; font-size: 12px; padding: 2px 10px; border-radius: 20px; margin-bottom: 10px; }
     .score-pending { font-size: 13px; color: #9ca3af; margin-top: 10px; }
     .score-result { font-size: 13px; color: #495e9f; font-weight: 700; margin-top: 10px; }
@@ -78,11 +79,12 @@
     .result-msg { font-size: 14px; color: #6b7280; line-height: 1.7; }
     .loading { font-size: 13px; color: #9ca3af; margin-top: 8px; text-align: center; }
     .retest-notice { background: #e8f5e9; border-radius: 8px; padding: 16px; text-align: center; font-size: 14px; color: #2e7d32; font-weight: 700; margin-bottom: 24px; }
+    .error-box { background: #fdf0f0; border: 1px solid #f5c2c5; color: #bd3c40; border-radius: 8px; padding: 16px; font-size: 14px; text-align: center; }
     @media (max-width: 640px) {
       header { padding: 0 14px; }
       header .app-name { display: none; }
       header .user-info { gap: 8px; }
-      .btn-logout { padding: 5px 10px; font-size: 11px; }
+      .btn-back { padding: 5px 10px; font-size: 11px; }
       main { padding: 16px 12px 60px; }
       .test-header h1 { font-size: 17px; }
       .question-body { padding: 14px; }
@@ -102,21 +104,17 @@
     <div class="user-info">
       <span class="grade-badge" id="grade-badge">－等級</span>
       <span id="header-name">読み込み中...</span>
-      <button class="btn-logout" onclick="logout()">ログアウト</button>
+      <a class="btn-back" href="member_top.html">← 戻る</a>
     </div>
   </header>
 
-  <main>
+  <main id="main-area">
     <div class="test-header">
-      <div class="breadcrumb">新人研修 ＞ 1等級 ＞ テスト</div>
-      <h1>新人研修 確認テスト</h1>
-      <div class="meta">
-        <span>全3問</span>
-        <span class="pass-badge">合格基準：80点以上</span>
-      </div>
+      <div class="breadcrumb" id="breadcrumb">読み込み中...</div>
+      <h1 id="test-title">テスト</h1>
+      <div class="meta" id="test-meta"></div>
     </div>
 
-    <!-- 再試験許可通知（再試験時のみ表示） -->
     <div class="retest-notice" id="retest-notice" style="display:none">
       管理者から再試験が許可されました。もう一度挑戦してください！
     </div>
@@ -127,52 +125,14 @@
       <div class="result-msg" id="result-msg"></div>
     </div>
 
-    <div class="progress-wrap">
-      <div class="progress-info"><span>回答状況</span><span id="progress-text">0 / 3 回答済み</span></div>
+    <div class="progress-wrap" id="progress-wrap" style="display:none">
+      <div class="progress-info"><span>回答状況</span><span id="progress-text">0 / 0 回答済み</span></div>
       <div class="bar-bg"><div class="bar-fill" id="progress-bar" style="width:0%"></div></div>
     </div>
 
-    <div class="question-card">
-      <div class="question-head"><span class="q-number">問1</span><span class="q-type type-choice">4択</span></div>
-      <div class="question-body">
-        <div class="question-text">お客様からクレームを受けた際、最初に行うべき対応として正しいものはどれですか？</div>
-        <div class="choices" id="q1-choices">
-          <label class="choice"><input type="radio" name="q1" value="0" onchange="updateProgress()"> すぐに上司を呼ぶ</label>
-          <label class="choice"><input type="radio" name="q1" value="1" onchange="updateProgress()"> まずお客様の話をしっかり聞く</label>
-          <label class="choice"><input type="radio" name="q1" value="2" onchange="updateProgress()"> 原因を調査してから対応する</label>
-          <label class="choice"><input type="radio" name="q1" value="3" onchange="updateProgress()"> お詫びの品を用意する</label>
-        </div>
-      </div>
-    </div>
+    <div id="questions-area"></div>
 
-    <div class="question-card">
-      <div class="question-head"><span class="q-number">問2</span><span class="q-type type-truefalse">○×</span></div>
-      <div class="question-body">
-        <div class="question-text">電話対応では、相手が名乗る前にこちらから会社名・名前を名乗るのが基本マナーである。</div>
-        <div class="truefalse" id="q2-choices">
-          <button class="tf-btn maru" onclick="selectTF(this, 'maru')">○ <span>正しい</span></button>
-          <button class="tf-btn batu" onclick="selectTF(this, 'batu')">× <span>間違い</span></button>
-        </div>
-      </div>
-    </div>
-
-    <div class="question-card">
-      <div class="question-head"><span class="q-number">問3</span><span class="q-type type-text">記述</span></div>
-      <div class="question-body">
-        <div class="question-text">接客において「ホスピタリティ」とはどういう意味か、あなたの言葉で説明してください。</div>
-        <div id="q3-input-area">
-          <textarea class="text-input" id="q3-text" placeholder="ここに回答を入力してください" oninput="updateProgress()"></textarea>
-          <div class="text-hint">※ 記述式は管理者が採点します</div>
-        </div>
-        <div id="q3-submitted-area" style="display:none">
-          <div class="submitted-badge">提出済み</div>
-          <div class="text-submitted" id="q3-submitted-text"></div>
-          <div class="score-pending" id="q3-score-area">採点待ちです。しばらくお待ちください。</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="submit-area">
+    <div class="submit-area" id="submit-area" style="display:none">
       <button class="btn-submit" id="btn-submit" onclick="submitTest()">テストを提出する</button>
       <div class="submit-note">提出後は回答を変更できません</div>
       <div class="loading" id="loading" style="display:none">保存中...</div>
@@ -187,17 +147,22 @@
     });
 
     var CURRENT_USER = null;
-    var TEST_CONFIG = {
-      category: '新人研修',
-      grade: 1,
-      pass_score: 80,
-      q1_correct: 1,
-      q2_correct: 'maru',
-      q3_question: '接客において「ホスピタリティ」とはどういう意味か、あなたの言葉で説明してください。'
-    };
+    var TEST_SET  = null;          // test_sets の行
+    var CATEGORY  = null;          // categories の行
+    var QUESTIONS = [];            // [{ q, choices:[{id,body,is_correct}] }]
+    var ANSWERS   = {};            // { question_id: 値 }
+    var SUBMITTED = false;         // 既に提出済み（再試験不可）
 
-    var answered = { q1: false, q2: false, q3: false };
-    var q2Selected = null;
+    function getParam(name) {
+      var m = new RegExp('[?&]' + name + '=([^&]+)').exec(location.search);
+      return m ? decodeURIComponent(m[1]) : null;
+    }
+
+    function showError(msg) {
+      document.getElementById('main-area').innerHTML =
+        '<div class="error-box">' + msg + '</div>' +
+        '<div style="text-align:center;margin-top:16px"><a class="btn-back" style="background:#495e9f" href="member_top.html">メンバー画面に戻る</a></div>';
+    }
 
     // ============================================
     // ログイン確認
@@ -220,227 +185,400 @@
       document.getElementById('header-name').textContent = profile.name;
       document.getElementById('grade-badge').textContent = profile.grade + '等級';
 
-      loadPastAnswer();
+      loadTest();
     }
 
-    async function logout() {
-      await client.auth.signOut();
-      window.location.href = 'login.html';
+    // ============================================
+    // 問題集を読み込む
+    // ============================================
+    async function loadTest() {
+      var setId = parseInt(getParam('set_id'));
+      if (!setId) { showError('URLに問題集IDがありません（?set_id=xxx）。'); return; }
+
+      var { data: setRows, error: setErr } = await client
+        .from('test_sets').select('id, name, category_id, grade, pass_score')
+        .eq('id', setId).limit(1);
+      if (setErr || !setRows || setRows.length === 0) {
+        showError('問題集が見つかりません。'); return;
+      }
+      TEST_SET = setRows[0];
+
+      var { data: catRows } = await client
+        .from('categories').select('id, name').eq('id', TEST_SET.category_id).limit(1);
+      CATEGORY = (catRows && catRows[0]) ? catRows[0] : { id: TEST_SET.category_id, name: '－' };
+
+      var { data: qRows } = await client
+        .from('test_questions').select('id, question, type, point')
+        .eq('test_set_id', setId).order('id');
+
+      if (!qRows || qRows.length === 0) {
+        showError('この問題集にはまだ問題が登録されていません。'); return;
+      }
+
+      var qIds = qRows.map(function(q) { return q.id; });
+      var { data: cRows } = await client
+        .from('test_choices').select('id, question_id, body, is_correct')
+        .in('question_id', qIds).order('id');
+
+      QUESTIONS = qRows.map(function(q) {
+        return {
+          id: q.id, question: q.question, type: q.type, point: q.point || 0,
+          choices: (cRows || []).filter(function(c) { return c.question_id === q.id; })
+        };
+      });
+
+      // ヘッダー情報を描画
+      document.getElementById('breadcrumb').textContent = CATEGORY.name + ' ＞ ' + TEST_SET.grade + '等級 ＞ テスト';
+      document.getElementById('test-title').textContent = TEST_SET.name;
+      var totalPoints = QUESTIONS.reduce(function(s, q) { return s + q.point; }, 0);
+      document.getElementById('test-meta').innerHTML =
+        '<span>全' + QUESTIONS.length + '問</span>' +
+        '<span>合計配点：' + totalPoints + '点</span>' +
+        '<span class="pass-badge">合格基準：' + TEST_SET.pass_score + '点以上</span>';
+
+      // 提出済みチェック（再試験許可があれば受験可能）
+      var { data: results } = await client
+        .from('test_results').select('id, score, passed, answers, taken_at')
+        .eq('user_id', CURRENT_USER).eq('test_set_id', setId)
+        .order('taken_at', { ascending: false }).limit(1);
+
+      var latest = (results && results[0]) ? results[0] : null;
+
+      if (latest) {
+        var canRetest = await checkRetestPermission(setId);
+        if (canRetest) {
+          document.getElementById('retest-notice').style.display = 'block';
+          renderQuestions(false);
+        } else {
+          SUBMITTED = true;
+          renderQuestions(true);
+          await showPastResult(latest);
+        }
+      } else {
+        renderQuestions(false);
+      }
     }
 
     // ============================================
     // 再試験許可を確認する
     // ============================================
-    async function checkRetestPermission() {
+    async function checkRetestPermission(setId) {
       var { data: perms } = await client
-        .from('retest_permissions')
-        .select('id')
-        .eq('user_id', CURRENT_USER)
-        .eq('category', TEST_CONFIG.category)
-        .eq('grade', TEST_CONFIG.grade)
-        .is('used_at', null)
-        .limit(1);
-
+        .from('retest_permissions').select('id')
+        .eq('user_id', CURRENT_USER).eq('test_set_id', setId)
+        .is('used_at', null).limit(1);
       if (perms && perms.length > 0) {
-        // 許可を使用済みにする
-        await client
-          .from('retest_permissions')
-          .update({ used_at: new Date().toISOString() })
-          .eq('id', perms[0].id);
+        await client.from('retest_permissions')
+          .update({ used_at: new Date().toISOString() }).eq('id', perms[0].id);
         return true;
       }
       return false;
     }
 
     // ============================================
-    // 過去の提出状況を読み込む
+    // 問題を描画する
     // ============================================
-    async function loadPastAnswer() {
-      var { data: textRows, error: textError } = await client
-        .from('text_answers')
-        .select('answer, score, graded_at')
-        .eq('user_id', CURRENT_USER)
-        .eq('category', TEST_CONFIG.category)
-        .eq('grade', TEST_CONFIG.grade)
-        .limit(1);
+    function renderQuestions(disabled) {
+      var area = document.getElementById('questions-area');
+      var html = QUESTIONS.map(function(q, idx) {
+        var typeLabel = q.type === 'choice' ? '4択' : (q.type === 'truefalse' ? '○×' : '記述');
+        var typeCls   = 'type-' + q.type;
 
-      if (textError) { console.error('記述読み込みエラー:', textError.message); return; }
-      var textData = (textRows && textRows.length > 0) ? textRows[0] : null;
-
-      var { data: resultRows, error: resultError } = await client
-        .from('test_results')
-        .select('score, passed, q1_answer, q2_answer')
-        .eq('user_id', CURRENT_USER)
-        .eq('category', TEST_CONFIG.category)
-        .eq('grade', TEST_CONFIG.grade)
-        .order('taken_at', { ascending: false })
-        .limit(1);
-
-      if (resultError) { console.error('結果読み込みエラー:', resultError.message); return; }
-      var resultData = (resultRows && resultRows.length > 0) ? resultRows[0] : null;
-
-      // 提出済みの場合
-      if (textData || resultData) {
-
-        // 再試験許可があるか確認する
-        var canRetest = await checkRetestPermission();
-        if (canRetest) {
-          // 再試験許可あり → 通知を表示してそのまま受験可能にする
-          document.getElementById('retest-notice').style.display = 'block';
-          return; // 提出済み処理をスキップ
-        }
-
-        // 再試験許可なし → 提出済み状態を表示する
-        if (resultData && resultData.q1_answer !== null) {
-          var q1Val = resultData.q1_answer;
-          document.querySelectorAll('#q1-choices .choice').forEach(function(label, idx) {
-            label.querySelector('input').disabled = true;
-            if (idx === TEST_CONFIG.q1_correct) label.classList.add('correct');
-            else if (idx === q1Val && q1Val !== TEST_CONFIG.q1_correct) label.classList.add('wrong');
-            if (idx === q1Val) label.querySelector('input').checked = true;
-          });
-        }
-
-        if (resultData && resultData.q2_answer) {
-          var q2Val = resultData.q2_answer;
-          document.querySelectorAll('.tf-btn').forEach(function(btn) {
-            btn.onclick = null;
-            var type = btn.classList.contains('maru') ? 'maru' : 'batu';
-            if (type === TEST_CONFIG.q2_correct) btn.classList.add('correct');
-            else if (type === q2Val && q2Val !== TEST_CONFIG.q2_correct) btn.classList.add('wrong');
-          });
-        }
-
-        if (textData) showSubmittedState(textData.answer, textData.score, textData.graded_at);
-
-        var autoScore  = resultData ? resultData.score : 0;
-        var textScore  = (textData && textData.score !== null) ? textData.score : null;
-        var totalScore = textScore !== null ? autoScore + textScore : autoScore;
-        var passed     = totalScore >= TEST_CONFIG.pass_score;
-
-        var scoreLabel = textScore !== null ? totalScore + '点' : autoScore + '点（記述式採点待ち）';
-        document.getElementById('result-score').innerHTML = scoreLabel;
-
-        var badge = document.getElementById('result-badge');
-        var msg   = document.getElementById('result-msg');
-        if (textScore !== null) {
-          badge.textContent = passed ? '合格' : '未合格';
-          badge.className = 'result-badge ' + (passed ? 'passed' : 'failed');
-          msg.textContent = passed ? 'おめでとうございます！合格です。' : '惜しい！もう一度内容を見直してみましょう。';
+        var bodyHtml = '';
+        if (q.type === 'choice') {
+          bodyHtml = '<div class="choices" id="q-choices-' + q.id + '">' +
+            q.choices.map(function(c) {
+              return '<label class="choice"><input type="radio" name="q-' + q.id + '" value="' + c.id + '" ' +
+                (disabled ? 'disabled' : 'onchange="setAnswer(' + q.id + ', ' + c.id + ')"') +
+                '> ' + escapeHtml(c.body) + '</label>';
+            }).join('') + '</div>';
+        } else if (q.type === 'truefalse') {
+          bodyHtml = '<div class="truefalse" id="q-tf-' + q.id + '">' +
+            '<button class="tf-btn maru" ' + (disabled ? 'disabled' : 'onclick="selectTF(this,' + q.id + ',\'maru\')"') + '>○ <span>正しい</span></button>' +
+            '<button class="tf-btn batu" ' + (disabled ? 'disabled' : 'onclick="selectTF(this,' + q.id + ',\'batu\')"') + '>× <span>間違い</span></button>' +
+          '</div>';
         } else {
-          badge.textContent = '採点待ち';
-          badge.className = 'result-badge';
-          badge.style.background = '#fef3cd';
-          badge.style.color = '#856404';
-          msg.textContent = '4択・○×の結果は確定しています。記述式の採点をお待ちください。';
+          bodyHtml = '<div id="q-text-wrap-' + q.id + '">' +
+            '<textarea class="text-input" id="q-text-' + q.id + '" placeholder="ここに回答を入力してください" ' +
+              (disabled ? 'disabled' : 'oninput="setAnswer(' + q.id + ', this.value)"') + '></textarea>' +
+            '<div class="text-hint">※ 記述式は管理者が採点します</div>' +
+          '</div>';
         }
-        document.getElementById('result-card').classList.add('show');
-        document.getElementById('btn-submit').disabled = true;
-        document.getElementById('btn-submit').textContent = '提出済み';
+
+        return '<div class="question-card">' +
+          '<div class="question-head">' +
+            '<span class="q-number">問' + (idx + 1) + '</span>' +
+            '<span class="q-type ' + typeCls + '">' + typeLabel + '</span>' +
+            '<span class="q-point">' + q.point + '点</span>' +
+          '</div>' +
+          '<div class="question-body">' +
+            '<div class="question-text">' + escapeHtml(q.question) + '</div>' +
+            bodyHtml +
+          '</div>' +
+        '</div>';
+      }).join('');
+      area.innerHTML = html;
+
+      if (!disabled) {
+        document.getElementById('progress-wrap').style.display = 'block';
+        document.getElementById('submit-area').style.display = 'block';
+        updateProgress();
       }
     }
 
-    function showSubmittedState(answer, score, gradedAt) {
-      document.getElementById('q3-input-area').style.display = 'none';
-      document.getElementById('q3-submitted-area').style.display = 'block';
-      document.getElementById('q3-submitted-text').textContent = answer;
-      answered.q3 = true;
-      updateProgress();
-      var scoreArea = document.getElementById('q3-score-area');
-      if (score !== null && score !== undefined) {
-        scoreArea.className = 'score-result';
-        scoreArea.textContent = '採点結果：' + score + '点';
+    function escapeHtml(s) {
+      return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // ============================================
+    // 回答の記録と進捗更新
+    // ============================================
+    function setAnswer(qId, value) {
+      if (typeof value === 'string' && value.trim() === '') {
+        delete ANSWERS[qId];
       } else {
-        scoreArea.className = 'score-pending';
-        scoreArea.textContent = '採点待ちです。しばらくお待ちください。';
+        ANSWERS[qId] = value;
       }
+      updateProgress();
     }
 
-    // ============================================
-    // 回答・採点処理
-    // ============================================
-    function updateProgress() {
-      answered.q1 = !!document.querySelector('input[name="q1"]:checked');
-      var q3text = document.getElementById('q3-text');
-      if (q3text) answered.q3 = q3text.value.trim().length > 0;
-      var count = Object.values(answered).filter(Boolean).length;
-      document.getElementById('progress-text').textContent = count + ' / 3 回答済み';
-      document.getElementById('progress-bar').style.width = (count / 3 * 100) + '%';
-    }
-
-    function selectTF(btn, type) {
-      document.querySelectorAll('.tf-btn').forEach(function(b) {
+    function selectTF(btn, qId, type) {
+      var wrap = document.getElementById('q-tf-' + qId);
+      wrap.querySelectorAll('.tf-btn').forEach(function(b) {
         b.classList.remove('selected-maru', 'selected-batu');
       });
       btn.classList.add('selected-' + type);
-      q2Selected = type;
-      answered.q2 = true;
-      updateProgress();
+      setAnswer(qId, type);
     }
 
+    function updateProgress() {
+      var total = QUESTIONS.length;
+      var answered = QUESTIONS.filter(function(q) {
+        var v = ANSWERS[q.id];
+        if (q.type === 'text') return typeof v === 'string' && v.trim().length > 0;
+        return v !== undefined && v !== null;
+      }).length;
+      document.getElementById('progress-text').textContent = answered + ' / ' + total + ' 回答済み';
+      document.getElementById('progress-bar').style.width = (total > 0 ? (answered / total * 100) : 0) + '%';
+    }
+
+    // ============================================
+    // 提出
+    // ============================================
     async function submitTest() {
-      if (!answered.q1 || !answered.q2) { alert('問1と問2に回答してください。'); return; }
-      var q3text = document.getElementById('q3-text').value.trim();
-      if (!q3text) { alert('問3（記述式）を入力してください。'); return; }
+      // 全問回答チェック
+      var unanswered = QUESTIONS.filter(function(q) {
+        var v = ANSWERS[q.id];
+        if (q.type === 'text') return typeof v !== 'string' || v.trim().length === 0;
+        return v === undefined || v === null;
+      });
+      if (unanswered.length > 0) {
+        alert('未回答の問題があります（' + unanswered.length + '問）。すべて回答してから提出してください。');
+        return;
+      }
 
       document.getElementById('btn-submit').disabled = true;
       document.getElementById('loading').style.display = 'block';
 
-      var score = 0;
-      var q1Val    = parseInt(document.querySelector('input[name="q1"]:checked').value);
-      var q1Correct = (q1Val === TEST_CONFIG.q1_correct);
-      if (q1Correct) score += 50;
-      var q2Correct = (q2Selected === TEST_CONFIG.q2_correct);
-      if (q2Correct) score += 50;
-      var passed = score >= TEST_CONFIG.pass_score;
+      // 自動採点（choice / truefalse のみ）
+      var autoScore = 0;
+      var answersPayload = {};
+      var hasText = false;
 
-      document.querySelectorAll('#q1-choices .choice').forEach(function(label, idx) {
-        label.querySelector('input').disabled = true;
-        if (idx === TEST_CONFIG.q1_correct) label.classList.add('correct');
-        else if (idx === q1Val && !q1Correct) label.classList.add('wrong');
+      QUESTIONS.forEach(function(q) {
+        var v = ANSWERS[q.id];
+        var correct = null;
+        if (q.type === 'choice') {
+          var correctId = (q.choices.find(function(c) { return c.is_correct; }) || {}).id;
+          correct = (v === correctId);
+          if (correct) autoScore += q.point;
+        } else if (q.type === 'truefalse') {
+          // ○× は choices テーブルには無いので、管理画面側の仕様に合わせて question 側に正解保持が必要になるが、
+          // 既存スキーマでは choices を流用する。is_correct が付いた choice.body ('maru'/'batu') を正解とする。
+          var tfCorrect = (q.choices.find(function(c) { return c.is_correct; }) || {}).body;
+          correct = (v === tfCorrect);
+          if (correct) autoScore += q.point;
+        } else {
+          hasText = true;
+        }
+        answersPayload[q.id] = { type: q.type, answer: v, correct: correct };
       });
-      document.querySelectorAll('.tf-btn').forEach(function(btn) {
-        btn.onclick = null;
-        var type = btn.classList.contains('maru') ? 'maru' : 'batu';
-        if (type === TEST_CONFIG.q2_correct) btn.classList.add('correct');
-        else if (type === q2Selected && !q2Correct) btn.classList.add('wrong');
-        btn.classList.remove('selected-maru', 'selected-batu');
-      });
 
-      document.getElementById('result-score').innerHTML = score + '点（記述式採点待ち）';
-      var badge = document.getElementById('result-badge');
-      badge.textContent = '採点待ち';
-      badge.className = 'result-badge';
-      badge.style.background = '#fef3cd';
-      badge.style.color = '#856404';
-      document.getElementById('result-msg').textContent = '4択・○×の結果は確定しています。記述式の採点をお待ちください。';
-      document.getElementById('result-card').classList.add('show');
+      var passed = autoScore >= TEST_SET.pass_score;
 
+      // 結果表示（記述があるときは採点待ち扱い）
+      renderResult(autoScore, passed, hasText);
+      disableAllInputs();
+      revealCorrectness();
+
+      // DB 保存
       var { error: err1 } = await client.from('test_results').insert({
-        user_id:   CURRENT_USER,
-        category:  TEST_CONFIG.category,
-        grade:     TEST_CONFIG.grade,
-        score:     score,
-        passed:    passed,
-        q1_answer: q1Val,
-        q2_answer: q2Selected
+        user_id:     CURRENT_USER,
+        category:    CATEGORY.name,
+        grade:       TEST_SET.grade,
+        test_set_id: TEST_SET.id,
+        score:       autoScore,
+        passed:      passed,
+        answers:     answersPayload
       });
+      if (err1) console.error('test_results 保存エラー:', err1.message);
 
-      var { error: err2 } = await client.from('text_answers').insert({
-        user_id:  CURRENT_USER,
-        category: TEST_CONFIG.category,
-        grade:    TEST_CONFIG.grade,
-        question: TEST_CONFIG.q3_question,
-        answer:   q3text
+      // 記述式回答を question_id 単位で保存
+      var textRows = QUESTIONS.filter(function(q) { return q.type === 'text'; }).map(function(q) {
+        return {
+          user_id:     CURRENT_USER,
+          category:    CATEGORY.name,
+          grade:       TEST_SET.grade,
+          test_set_id: TEST_SET.id,
+          question_id: q.id,
+          question:    q.question,
+          answer:      ANSWERS[q.id]
+        };
       });
+      if (textRows.length > 0) {
+        var { error: err2 } = await client.from('text_answers').insert(textRows);
+        if (err2) console.error('text_answers 保存エラー:', err2.message);
+      }
 
-      if (err1) console.error('test_results保存エラー:', err1.message);
-      if (err2) console.error('text_answers保存エラー:', err2.message);
-
-      showSubmittedState(q3text, null, null);
       document.getElementById('loading').style.display = 'none';
       document.getElementById('btn-submit').textContent = '提出済み';
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ============================================
+    // 過去の結果表示
+    // ============================================
+    async function showPastResult(latest) {
+      // 過去回答を各問題の UI に反映
+      var answersMap = latest.answers || {};
+      QUESTIONS.forEach(function(q) {
+        var entry = answersMap[q.id];
+        if (!entry) return;
+        var v = entry.answer;
+        if (q.type === 'choice') {
+          var wrap = document.getElementById('q-choices-' + q.id);
+          if (!wrap) return;
+          wrap.querySelectorAll('.choice').forEach(function(label) {
+            var input = label.querySelector('input');
+            var val = parseInt(input.value);
+            var c = q.choices.find(function(cc) { return cc.id === val; });
+            if (c && c.is_correct) label.classList.add('correct');
+            if (val === v) {
+              input.checked = true;
+              if (c && !c.is_correct) label.classList.add('wrong');
+            }
+          });
+        } else if (q.type === 'truefalse') {
+          var tfWrap = document.getElementById('q-tf-' + q.id);
+          if (!tfWrap) return;
+          var correctType = (q.choices.find(function(c) { return c.is_correct; }) || {}).body;
+          tfWrap.querySelectorAll('.tf-btn').forEach(function(btn) {
+            var type = btn.classList.contains('maru') ? 'maru' : 'batu';
+            if (type === correctType) btn.classList.add('correct');
+            else if (type === v) btn.classList.add('wrong');
+          });
+        } else {
+          // text — 提出済みビュー
+          var tw = document.getElementById('q-text-wrap-' + q.id);
+          if (tw) {
+            tw.innerHTML =
+              '<div class="submitted-badge">提出済み</div>' +
+              '<div class="text-submitted">' + escapeHtml(v || '') + '</div>' +
+              '<div class="score-pending" id="q-text-score-' + q.id + '">採点待ちです。</div>';
+          }
+        }
+      });
+
+      // 記述式の採点取得
+      var { data: texts } = await client
+        .from('text_answers').select('question_id, score, graded_at')
+        .eq('user_id', CURRENT_USER).eq('test_set_id', TEST_SET.id);
+
+      var textScoreTotal = 0;
+      var anyUngraded = false;
+      (texts || []).forEach(function(t) {
+        var scoreEl = document.getElementById('q-text-score-' + t.question_id);
+        if (scoreEl) {
+          if (t.score !== null && t.score !== undefined) {
+            scoreEl.className = 'score-result';
+            scoreEl.textContent = '採点結果：' + t.score + '点';
+          } else {
+            anyUngraded = true;
+          }
+        }
+        if (t.score !== null && t.score !== undefined) textScoreTotal += t.score;
+      });
+
+      var hasText = QUESTIONS.some(function(q) { return q.type === 'text'; });
+      var totalScore = latest.score + textScoreTotal;
+      var finalPassed = totalScore >= TEST_SET.pass_score;
+
+      renderResult(totalScore, finalPassed, hasText && anyUngraded);
+      document.getElementById('progress-wrap').style.display = 'none';
+      document.getElementById('submit-area').style.display = 'none';
+    }
+
+    function renderResult(score, passed, waitingForText) {
+      document.getElementById('result-score').innerHTML = score + '<span>点</span>' + (waitingForText ? '（記述式採点待ち）' : '');
+      var badge = document.getElementById('result-badge');
+      var msg   = document.getElementById('result-msg');
+      if (waitingForText) {
+        badge.textContent = '採点待ち';
+        badge.className = 'result-badge';
+        badge.style.background = '#fef3cd';
+        badge.style.color = '#856404';
+        msg.textContent = '4択・○×の結果は確定しています。記述式の採点をお待ちください。';
+      } else {
+        badge.textContent = passed ? '合格' : '未合格';
+        badge.className = 'result-badge ' + (passed ? 'passed' : 'failed');
+        badge.style.background = '';
+        badge.style.color = '';
+        msg.textContent = passed ? 'おめでとうございます！合格です。' : '惜しい！もう一度内容を見直してみましょう。';
+      }
+      document.getElementById('result-card').classList.add('show');
+    }
+
+    function disableAllInputs() {
+      document.querySelectorAll('#questions-area input, #questions-area textarea, #questions-area .tf-btn').forEach(function(el) {
+        el.disabled = true;
+        if (el.onclick) el.onclick = null;
+      });
+      document.getElementById('btn-submit').disabled = true;
+    }
+
+    function revealCorrectness() {
+      QUESTIONS.forEach(function(q) {
+        var v = ANSWERS[q.id];
+        if (q.type === 'choice') {
+          var wrap = document.getElementById('q-choices-' + q.id);
+          if (!wrap) return;
+          wrap.querySelectorAll('.choice').forEach(function(label) {
+            var input = label.querySelector('input');
+            var val = parseInt(input.value);
+            var c = q.choices.find(function(cc) { return cc.id === val; });
+            if (c && c.is_correct) label.classList.add('correct');
+            else if (val === v) label.classList.add('wrong');
+          });
+        } else if (q.type === 'truefalse') {
+          var tfWrap = document.getElementById('q-tf-' + q.id);
+          if (!tfWrap) return;
+          var correctType = (q.choices.find(function(c) { return c.is_correct; }) || {}).body;
+          tfWrap.querySelectorAll('.tf-btn').forEach(function(btn) {
+            var type = btn.classList.contains('maru') ? 'maru' : 'batu';
+            btn.classList.remove('selected-maru','selected-batu');
+            if (type === correctType) btn.classList.add('correct');
+            else if (type === v) btn.classList.add('wrong');
+          });
+        } else {
+          var tw = document.getElementById('q-text-wrap-' + q.id);
+          if (tw) {
+            tw.innerHTML =
+              '<div class="submitted-badge">提出済み</div>' +
+              '<div class="text-submitted">' + escapeHtml(ANSWERS[q.id] || '') + '</div>' +
+              '<div class="score-pending" id="q-text-score-' + q.id + '">採点待ちです。</div>';
+          }
+        }
+      });
     }
 
     initUser();

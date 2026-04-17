@@ -323,6 +323,13 @@
         <label>配点</label>
         <input type="number" id="add-question-point" value="10" style="width:80px"> <span style="font-size:13px;color:#6b7280">点</span>
       </div>
+      <div id="tf-area" class="modal-field" style="display:none">
+        <label>正解</label>
+        <div style="display:flex;gap:12px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="radio" name="tf-correct" value="maru"> ○（正しい）</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="radio" name="tf-correct" value="batu"> ×（間違い）</label>
+        </div>
+      </div>
       <div id="choices-area" class="modal-field">
         <label>選択肢（正解に✓をつける）</label>
         <div style="display:flex;flex-direction:column;gap:8px">
@@ -1336,6 +1343,7 @@
       ['c1-correct','c2-correct','c3-correct','c4-correct'].forEach(function(id) {
         document.getElementById(id).checked = false;
       });
+      document.querySelectorAll('input[name="tf-correct"]').forEach(function(el) { el.checked = false; });
       document.getElementById('add-question-type').value = 'choice';
       document.getElementById('add-question-point').value = '10';
       toggleChoices();
@@ -1344,7 +1352,8 @@
 
     function toggleChoices() {
       var type = document.getElementById('add-question-type').value;
-      document.getElementById('choices-area').style.display = type === 'choice' ? 'block' : 'none';
+      document.getElementById('choices-area').style.display = type === 'choice'    ? 'block' : 'none';
+      document.getElementById('tf-area').style.display      = type === 'truefalse' ? 'block' : 'none';
     }
 
     async function addQuestion() {
@@ -1373,6 +1382,14 @@
           };
         }).filter(function(c) { return c.body; });
         if (choices.length > 0) await client.from('test_choices').insert(choices);
+      } else if (type === 'truefalse' && qData && qData[0]) {
+        // ○×は test_choices に 'maru'/'batu' を格納（is_correct が真の方が正解）
+        var tfCorrect = (document.querySelector('input[name="tf-correct"]:checked') || {}).value;
+        if (!tfCorrect) { alert('○×問題の正解を選択してください'); return; }
+        await client.from('test_choices').insert([
+          { question_id: qData[0].id, body: 'maru', is_correct: tfCorrect === 'maru' },
+          { question_id: qData[0].id, body: 'batu', is_correct: tfCorrect === 'batu' }
+        ]);
       }
 
       closeModal('add-question-modal');
@@ -2149,7 +2166,7 @@
       // 部署・エリアのマスタを事前取得
       var { data: depts } = await client.from('departments').select('id, name').order('id');
       csvDepts = depts || [];
-      var { data: areas } = await client.from('areas').select('id, name').order('id');
+      var { data: areas } = await client.from('areas').select('id, name, department_id').order('id');
       csvAreas = areas || [];
 
       // モーダルをリセット
@@ -2182,13 +2199,13 @@
       var descs = {
         member:
           '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
-          '① 名前　② 社員番号　③ パスワード　④ 役割（member / manager / dept_admin）　⑤ 等級（0〜5）　⑥ 部署名　⑦ 店舗名（任意）　⑧ エリア名（任意）',
+          '① 名前　② 社員番号　③ パスワード　④ 部署名　⑤ 店舗名（任意）　⑥ エリア名（任意）　⑦ 等級（0〜5）　⑧ 役割（member / manager / dept_admin）',
         category:
           '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
           '① カテゴリ名　② 部署名',
         store:
           '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
-          '① 店舗名　② エリア名',
+          '① 店舗名　② 部署名　③ エリア名',
         item:
           '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
           '① 項目名　② 等級（0〜5）　③ ステップ1　④ ステップ2　⑤ ステップ3 …（ステップは列を増やして何個でも追加可）'
@@ -2264,16 +2281,16 @@
     function showCsvPreview() {
       var headers, rows;
       if (csvImportType === 'member') {
-        headers = ['名前', '社員番号', 'PW', '役割', '等級', '部署', '店舗', 'エリア'];
+        headers = ['名前', '社員番号', 'PW', '部署', '店舗', 'エリア', '等級', '役割'];
         rows = csvParsedData.map(function(r) {
-          return [r[0]||'', r[1]||'', r[2] ? '●（入力済）' : '—', r[3]||'member', r[4]||'0', r[5]||'', r[6]||'', r[7]||''];
+          return [r[0]||'', r[1]||'', r[2] ? '●（入力済）' : '—', r[3]||'', r[4]||'', r[5]||'', r[6]||'0', r[7]||'member'];
         });
       } else if (csvImportType === 'category') {
         headers = ['カテゴリ名', '部署名'];
         rows = csvParsedData.map(function(r) { return [r[0]||'', r[1]||'']; });
       } else if (csvImportType === 'store') {
-        headers = ['店舗名', 'エリア名'];
-        rows = csvParsedData.map(function(r) { return [r[0]||'', r[1]||'']; });
+        headers = ['店舗名', '部署名', 'エリア名'];
+        rows = csvParsedData.map(function(r) { return [r[0]||'', r[1]||'', r[2]||'']; });
       } else {
         // item
         headers = ['項目名', '等級', 'ステップ数'];
@@ -2309,16 +2326,16 @@
         for (var i = 0; i < csvParsedData.length; i++) {
           var r = csvParsedData[i];
           var name = (r[0]||'').trim(), eid = (r[1]||'').trim(), pw = (r[2]||'').trim();
+          var deptName = (r[3]||'').trim(), storeName = (r[4]||'').trim(), areaName = (r[5]||'').trim();
+          var grade = parseInt(r[6])||0;
           // ロールを正規化（大文字→小文字、スペース→アンダースコア）してからバリデーション
-          var rawRole = (r[3]||'').trim();
+          var rawRole = (r[7]||'').trim();
           var role = rawRole.toLowerCase().replace(/\s+/g, '_') || 'member';
           var validRoles = ['member', 'manager', 'dept_admin'];
           if (!validRoles.includes(role)) {
             errors.push((i+1) + '行目：役割「' + rawRole + '」は無効です（member / manager / dept_admin のいずれかを指定してください）');
             continue;
           }
-          var grade = parseInt(r[4])||0;
-          var deptName = (r[5]||'').trim(), storeName = (r[6]||'').trim(), areaName = (r[7]||'').trim();
 
           if (!name || !eid || !pw) { errors.push((i+1) + '行目：名前・社員番号・パスワードは必須です'); continue; }
           var dept = csvDepts.find(function(d) { return d.name === deptName; });
@@ -2373,11 +2390,15 @@
       } else if (csvImportType === 'store') {
         for (var i = 0; i < csvParsedData.length; i++) {
           var r = csvParsedData[i];
-          var name = (r[0]||'').trim(), areaName = (r[1]||'').trim();
-          if (!name || !areaName) { errors.push((i+1) + '行目：店舗名・エリア名は必須です'); continue; }
+          var name = (r[0]||'').trim(), deptName = (r[1]||'').trim(), areaName = (r[2]||'').trim();
+          if (!name || !deptName || !areaName) { errors.push((i+1) + '行目：店舗名・部署名・エリア名は必須です'); continue; }
 
-          var area = csvAreas.find(function(a) { return a.name === areaName; });
-          if (!area) { errors.push((i+1) + '行目：エリア「' + areaName + '」が見つかりません'); continue; }
+          var dept = csvDepts.find(function(d) { return d.name === deptName; });
+          if (!dept) { errors.push((i+1) + '行目：部署「' + deptName + '」が見つかりません'); continue; }
+
+          // 同じエリア名が複数部署に存在する可能性があるので、部署IDで絞り込む
+          var area = csvAreas.find(function(a) { return a.name === areaName && a.department_id === dept.id; });
+          if (!area) { errors.push((i+1) + '行目：部署「' + deptName + '」にエリア「' + areaName + '」が見つかりません'); continue; }
 
           var { error } = await client.from('stores').insert({ name: name, area_id: area.id });
           if (error) { errors.push((i+1) + '行目（' + name + '）：' + error.message); continue; }
@@ -2495,7 +2516,7 @@
                 ? areaStores.map(function(s) {
                     return '<tr>' +
                       '<td>' + s.name + '</td>' +
-                      '<td><div class="td-actions">' +
+                      '<td style="text-align:right"><div class="td-actions" style="justify-content:flex-end">' +
                         '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="openMoveStoreModal(' + s.id + ', \'' + s.name + '\')">移動</button>' +
                         '<button class="btn btn-danger btn-sm" onclick="deleteStore(' + s.id + ', \'' + s.name + '\')">削除</button>' +
                       '</div></td>' +
@@ -2734,29 +2755,30 @@
       list.innerHTML = '<div class="loading-text">読み込み中...</div>';
 
       var retestQuery = client.from('test_results')
-        .select('user_id, category, grade, score, passed, taken_at')
+        .select('user_id, category, grade, score, passed, taken_at, test_set_id')
         .eq('passed', false).order('taken_at', { ascending: false });
-      // dept_admin の場合は自部署メンバーの結果のみ表示する
       if (currentRole === 'dept_admin' && allowedMemberIds !== null && allowedMemberIds.length > 0) {
         retestQuery = retestQuery.in('user_id', allowedMemberIds);
       }
 
       var { data: results, error } = await retestQuery;
-
       if (error) { list.innerHTML = '<div class="loading-text">取得エラー</div>'; return; }
 
       var { data: members }       = await client.from('user_profiles').select('id, name, store');
-      var { data: permissions }   = await client.from('retest_permissions').select('user_id, category, grade, used_at').is('used_at', null);
-      var { data: passedResults } = await client.from('test_results').select('user_id, category, grade').eq('passed', true);
+      var { data: permissions }   = await client.from('retest_permissions').select('user_id, test_set_id, used_at').is('used_at', null);
+      var { data: passedResults } = await client.from('test_results').select('user_id, test_set_id').eq('passed', true);
+      var { data: testSets }      = await client.from('test_sets').select('id, name');
 
-      var passedSet = (passedResults || []).map(function(r) { return r.user_id + '_' + r.category + '_' + r.grade; });
+      // 既に合格している (user_id × test_set_id) を除外
+      var passedKey = (passedResults || []).map(function(r) { return r.user_id + '_' + r.test_set_id; });
       var filteredResults = (results || []).filter(function(r) {
-        return passedSet.indexOf(r.user_id + '_' + r.category + '_' + r.grade) === -1;
+        return r.test_set_id != null && passedKey.indexOf(r.user_id + '_' + r.test_set_id) === -1;
       });
 
+      // user_id × test_set_id ごとに最新1件に絞る（既に order 済み）
       var seen = {};
       filteredResults = filteredResults.filter(function(r) {
-        var key = r.user_id + '_' + r.category + '_' + r.grade;
+        var key = r.user_id + '_' + r.test_set_id;
         if (seen[key]) return false;
         seen[key] = true;
         return true;
@@ -2772,27 +2794,31 @@
         var name   = member ? member.name : r.user_id;
         var store  = member ? (member.store || '未設定') : '－';
         var date   = new Date(r.taken_at).toLocaleDateString('ja-JP');
+        var ts     = (testSets || []).find(function(s) { return s.id === r.test_set_id; });
+        var tsName = ts ? ts.name : '（問題集不明）';
         var hasPermission = (permissions || []).some(function(p) {
-          return p.user_id === r.user_id && p.category === r.category && p.grade === r.grade;
+          return p.user_id === r.user_id && p.test_set_id === r.test_set_id;
         });
 
         return '<tr>' +
-          '<td>' + name + '</td><td>' + store + '</td><td>' + r.category + '</td>' +
+          '<td>' + name + '</td><td>' + store + '</td><td>' + tsName + '</td>' +
           '<td>' + r.grade + '等級</td><td>' + r.score + '点</td><td>' + date + '</td>' +
           '<td>' + (hasPermission
             ? '<span style="font-size:12px;color:#2e7d32;font-weight:700">許可済み</span>'
-            : '<button class="btn btn-primary btn-sm" onclick="permitRetest(\'' + r.user_id + '\',\'' + r.category + '\',' + r.grade + ')">再試験を許可</button>'
+            : '<button class="btn btn-primary btn-sm" onclick="permitRetest(\'' + r.user_id + '\',' + r.test_set_id + ',\'' + (r.category || '').replace(/'/g,"&#39;") + '\',' + r.grade + ')">再試験を許可</button>'
           ) + '</td>' +
         '</tr>';
       }).join('');
 
       list.innerHTML = '<div class="card"><div class="card-body" style="padding:0">' +
-        '<table><thead><tr><th>名前</th><th>店舗</th><th>カテゴリ</th><th>等級</th><th>点数</th><th>受験日</th><th></th></tr></thead>' +
+        '<table><thead><tr><th>名前</th><th>店舗</th><th>問題集</th><th>等級</th><th>点数</th><th>受験日</th><th></th></tr></thead>' +
           '<tbody>' + rows + '</tbody></table></div></div>';
     }
 
-    async function permitRetest(userId, category, grade) {
-      var { error } = await client.from('retest_permissions').insert({ user_id: userId, category: category, grade: grade });
+    async function permitRetest(userId, testSetId, category, grade) {
+      var { error } = await client.from('retest_permissions').insert({
+        user_id: userId, test_set_id: testSetId, category: category, grade: grade
+      });
       if (error) { alert('エラー：' + error.message); return; }
       showToast('再試験を許可しました ✓');
       loadRetest();
