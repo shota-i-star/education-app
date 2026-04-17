@@ -661,11 +661,12 @@
         var statusHtml = '';
         var btnLabel = '受ける';
 
-        if (!latest) {
-          statusHtml = '<span class="ts-status unanswered">未受験</span>';
-        } else if (ungraded) {
+        if (ungraded) {
+          // 採点中は最優先で判定（latest が無くても text_answers が残っていれば採点中扱い）
           statusHtml = '<span class="ts-status pending">採点中</span>';
-          btnLabel = '結果を見る';
+          btnLabel = '採点待ち';
+        } else if (!latest) {
+          statusHtml = '<span class="ts-status unanswered">未受験</span>';
         } else {
           // 記述も含めて合計点を計算し、合格基準と比較
           var totalScore = (latest.score || 0) + (textTotalBySet[s.id] || 0);
