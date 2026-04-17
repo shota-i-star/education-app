@@ -404,10 +404,11 @@
         answersPayload[q.id] = { type: q.type, answer: v, correct: correct };
       });
 
-      var passed = autoScore >= TEST_SET.pass_score;
+      // 記述式がある場合は採点確定まで passed を null にする（採点中）
+      var passed = hasText ? null : (autoScore >= TEST_SET.pass_score);
 
-      // 結果表示（記述があるときは採点待ち扱い）
-      renderResult(autoScore, passed, hasText);
+      // 結果表示（記述があるときは採点中）
+      renderResult(autoScore, passed === true, hasText);
       disableAllInputs();
       revealCorrectness();
 
@@ -510,10 +511,11 @@
       });
 
       var hasText = QUESTIONS.some(function(q) { return q.type === 'text'; });
+      var waiting = hasText && anyUngraded;
       var totalScore = latest.score + textScoreTotal;
       var finalPassed = totalScore >= TEST_SET.pass_score;
 
-      renderResult(totalScore, finalPassed, hasText && anyUngraded);
+      renderResult(totalScore, finalPassed, waiting);
       document.getElementById('progress-wrap').style.display = 'none';
       document.getElementById('submit-area').style.display = 'none';
     }
@@ -523,11 +525,11 @@
       var badge = document.getElementById('result-badge');
       var msg   = document.getElementById('result-msg');
       if (waitingForText) {
-        badge.textContent = '採点待ち';
+        badge.textContent = '採点中';
         badge.className = 'result-badge';
         badge.style.background = '#fef3cd';
         badge.style.color = '#856404';
-        msg.textContent = '4択・○×の結果は確定しています。記述式の採点をお待ちください。';
+        msg.textContent = '選択式の点数は確定しています。記述式の採点後に合否が確定します。';
       } else {
         badge.textContent = passed ? '合格' : '未合格';
         badge.className = 'result-badge ' + (passed ? 'passed' : 'failed');

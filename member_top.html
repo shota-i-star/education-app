@@ -644,38 +644,43 @@
       var permittedSet = {};
       (perms || []).forEach(function(p) { if (p.test_set_id != null) permittedSet[p.test_set_id] = true; });
 
+      // 合計点（選択式 + 採点済み記述式）を test_set 単位で集計
+      var textTotalBySet = {};
+      (texts || []).forEach(function(t) {
+        if (t.test_set_id == null) return;
+        if (t.score !== null && t.score !== undefined) {
+          textTotalBySet[t.test_set_id] = (textTotalBySet[t.test_set_id] || 0) + t.score;
+        }
+      });
+
       var html = sets.map(function(s) {
-        var latest  = latestBySet[s.id];
-        var ungraded = !!hasUngradedTextBySet[s.id];
+        var latest    = latestBySet[s.id];
+        var ungraded  = !!hasUngradedTextBySet[s.id];
         var permitted = !!permittedSet[s.id];
 
         var statusHtml = '';
         var btnLabel = '受ける';
-        var btnDisabled = false;
 
         if (!latest) {
           statusHtml = '<span class="ts-status unanswered">未受験</span>';
         } else if (ungraded) {
-          statusHtml = '<span class="ts-status pending">採点待ち</span>';
-          // 採点待ちでも再受験はさせない（採点確定まで）
-          btnLabel = '採点待ち';
-          btnDisabled = true;
-        } else if (latest.passed) {
-          statusHtml = '<span class="ts-status passed">合格 ' + latest.score + '点</span>';
-          btnLabel = '合格済み';
-          btnDisabled = true;
+          statusHtml = '<span class="ts-status pending">採点中</span>';
+          btnLabel = '結果を見る';
         } else {
-          statusHtml = '<span class="ts-status failed">不合格 ' + latest.score + '点</span>';
-          if (permitted) {
+          // 記述も含めて合計点を計算し、合格基準と比較
+          var totalScore = (latest.score || 0) + (textTotalBySet[s.id] || 0);
+          var finalPassed = totalScore >= s.pass_score;
+          if (finalPassed) {
+            statusHtml = '<span class="ts-status passed">合格 ' + totalScore + '点</span>';
+            btnLabel = '結果を見る';
+          } else if (permitted) {
+            statusHtml = '<span class="ts-status failed">不合格 ' + totalScore + '点</span>';
             btnLabel = '再試験';
           } else {
-            btnLabel = '再試験待ち';
-            btnDisabled = true;
+            statusHtml = '<span class="ts-status failed">不合格 ' + totalScore + '点</span>';
+            btnLabel = '結果を見る';
           }
         }
-
-        var btnCls = 'ts-take-btn' + (btnDisabled ? ' disabled' : '');
-        var btnOnclick = btnDisabled ? '' : 'onclick="location.href=\'test_page.html?set_id=' + s.id + '\'"';
 
         return '<div class="ts-item">' +
           '<div class="ts-item-info">' +
@@ -685,7 +690,7 @@
               statusHtml +
             '</div>' +
           '</div>' +
-          '<button class="' + btnCls + '" ' + btnOnclick + (btnDisabled ? ' disabled' : '') + '>' + btnLabel + '</button>' +
+          '<button class="ts-take-btn" onclick="location.href=\'test_page.html?set_id=' + s.id + '\'">' + btnLabel + '</button>' +
         '</div>';
       }).join('');
 

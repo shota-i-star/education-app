@@ -278,6 +278,10 @@
         <input type="text" id="add-testset-name" placeholder="例：新人研修 2等級 テスト">
       </div>
       <div class="modal-field">
+        <label>部署</label>
+        <select id="add-testset-dept" onchange="updateTestSetCategories()"></select>
+      </div>
+      <div class="modal-field">
         <label>カテゴリ</label>
         <select id="add-testset-category"></select>
       </div>
@@ -1285,34 +1289,61 @@
       list.innerHTML = html;
     }
 
+    var testSetCategoriesCache = [];
+    var testSetCatDeptsCache = [];
+
     async function openAddTestSetModal() {
-      // 全カテゴリと中間テーブルを取得する
+      // 部署・カテゴリ・中間テーブルを取得する
+      var { data: depts }         = await client.from('departments').select('id, name').order('id');
       var { data: allCategories } = await client.from('categories').select('id, name').order('id');
       var { data: catDepts }      = await client.from('category_departments').select('category_id, department_id');
 
-      var categories = allCategories || [];
+      testSetCategoriesCache = allCategories || [];
+      testSetCatDeptsCache   = catDepts || [];
+
+      // dept_admin は自部署のみ
+      var visibleDepts = depts || [];
       if (currentRole === 'dept_admin' && currentDeptId) {
-        // dept_admin は自部署に紐づくカテゴリのみ表示する
-        var deptCatIds = (catDepts || [])
-          .filter(function(cd) { return cd.department_id === currentDeptId; })
-          .map(function(cd) { return cd.category_id; });
-        categories = categories.filter(function(c) { return deptCatIds.indexOf(c.id) !== -1; });
+        visibleDepts = visibleDepts.filter(function(d) { return d.id === currentDeptId; });
       }
-      var sel = document.getElementById('add-testset-category');
-      sel.innerHTML = (categories || []).map(function(c) {
-        return '<option value="' + c.id + '">' + c.name + '</option>';
+
+      var deptSel = document.getElementById('add-testset-dept');
+      deptSel.innerHTML = visibleDepts.map(function(d) {
+        return '<option value="' + d.id + '">' + d.name + '</option>';
       }).join('');
+
+      updateTestSetCategories();
+
       document.getElementById('add-testset-name').value = '';
       document.getElementById('add-testset-pass').value = '80';
       document.getElementById('add-testset-modal').classList.add('show');
     }
 
+    function updateTestSetCategories() {
+      var deptId = parseInt(document.getElementById('add-testset-dept').value);
+      var deptCatIds = testSetCatDeptsCache
+        .filter(function(cd) { return cd.department_id === deptId; })
+        .map(function(cd) { return cd.category_id; });
+      var cats = testSetCategoriesCache.filter(function(c) { return deptCatIds.indexOf(c.id) !== -1; });
+
+      var sel = document.getElementById('add-testset-category');
+      if (cats.length === 0) {
+        sel.innerHTML = '<option value="">（この部署にはカテゴリがありません）</option>';
+      } else {
+        sel.innerHTML = cats.map(function(c) {
+          return '<option value="' + c.id + '">' + c.name + '</option>';
+        }).join('');
+      }
+    }
+
     async function addTestSet() {
       var name  = document.getElementById('add-testset-name').value.trim();
-      var catId = parseInt(document.getElementById('add-testset-category').value);
+      var catVal = document.getElementById('add-testset-category').value;
+      var catId = parseInt(catVal);
       var grade = parseInt(document.getElementById('add-testset-grade').value);
       var pass  = parseInt(document.getElementById('add-testset-pass').value);
       if (!name) { alert('問題集名を入力してください'); return; }
+      if (!catVal || isNaN(catId)) { alert('カテゴリを選択してください'); return; }
 
       var { error } = await client.from('test_sets').insert({ name: name, category_id: catId, grade: grade, pass_score: pass });
       if (error) { alert('追加エラー：' + error.message); return; }
@@ -2156,6 +2187,7 @@
     var csvParsedData = [];
     var csvDepts = [];
     var csvAreas = [];
+    var csvStores = [];
     var csvItemCatId = null; // 項目一括追加時のカテゴリID
 
     async function openCsvModal(type, extraId) {
@@ -2168,6 +2200,8 @@
       csvDepts = depts || [];
       var { data: areas } = await client.from('areas').select('id, name, department_id').order('id');
       csvAreas = areas || [];
+      var { data: stores } = await client.from('stores').select('id, name, area_id').order('id');
+      csvStores = stores || [];
 
       // モーダルをリセット
       document.getElementById('csv-file-input').value = '';
@@ -2199,13 +2233,14 @@
       var descs = {
         member:
           '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
-          '① 名前　② 社員番号　③ パスワード　④ 部署名　⑤ 店舗名（任意）　⑥ エリア名（任意）　⑦ 等級（0〜5）　⑧ 役割（member / manager / dept_admin）',
+          '① 名前　② 社員番号　③ パスワード　④ 部署名　⑤ 店舗名（任意）　⑥ 等級（0〜5）　⑦ 役割（member / manager / dept_admin）<br>' +
+          '<span style="font-size:11px;color:#6b7280">※ エリアは店舗に紐づくため不要です</span>',
         category:
           '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
           '① カテゴリ名　② 部署名',
         store:
           '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
-          '① 店舗名　② 部署名　③ エリア名',
+          '① 部署名　② 店舗名　③ エリア名',
         item:
           '<strong>列の順番（1行目はヘッダー行）：</strong><br>' +
           '① 項目名　② 等級（0〜5）　③ ステップ1　④ ステップ2　⑤ ステップ3 …（ステップは列を増やして何個でも追加可）'
@@ -2281,15 +2316,15 @@
     function showCsvPreview() {
       var headers, rows;
       if (csvImportType === 'member') {
-        headers = ['名前', '社員番号', 'PW', '部署', '店舗', 'エリア', '等級', '役割'];
+        headers = ['名前', '社員番号', 'PW', '部署', '店舗', '等級', '役割'];
         rows = csvParsedData.map(function(r) {
-          return [r[0]||'', r[1]||'', r[2] ? '●（入力済）' : '—', r[3]||'', r[4]||'', r[5]||'', r[6]||'0', r[7]||'member'];
+          return [r[0]||'', r[1]||'', r[2] ? '●（入力済）' : '—', r[3]||'', r[4]||'', r[5]||'0', r[6]||'member'];
         });
       } else if (csvImportType === 'category') {
         headers = ['カテゴリ名', '部署名'];
         rows = csvParsedData.map(function(r) { return [r[0]||'', r[1]||'']; });
       } else if (csvImportType === 'store') {
-        headers = ['店舗名', '部署名', 'エリア名'];
+        headers = ['部署名', '店舗名', 'エリア名'];
         rows = csvParsedData.map(function(r) { return [r[0]||'', r[1]||'', r[2]||'']; });
       } else {
         // item
@@ -2326,20 +2361,31 @@
         for (var i = 0; i < csvParsedData.length; i++) {
           var r = csvParsedData[i];
           var name = (r[0]||'').trim(), eid = (r[1]||'').trim(), pw = (r[2]||'').trim();
-          var deptName = (r[3]||'').trim(), storeName = (r[4]||'').trim(), areaName = (r[5]||'').trim();
-          var grade = parseInt(r[6])||0;
+          var deptName = (r[3]||'').trim(), storeName = (r[4]||'').trim();
+          var grade = parseInt(r[5])||0;
           // ロールを正規化（大文字→小文字、スペース→アンダースコア）してからバリデーション
-          var rawRole = (r[7]||'').trim();
+          var rawRole = (r[6]||'').trim();
           var role = rawRole.toLowerCase().replace(/\s+/g, '_') || 'member';
           var validRoles = ['member', 'manager', 'dept_admin'];
           if (!validRoles.includes(role)) {
             errors.push((i+1) + '行目：役割「' + rawRole + '」は無効です（member / manager / dept_admin のいずれかを指定してください）');
             continue;
           }
+          // エリアは店舗から自動決定
+          var areaName = null;
 
           if (!name || !eid || !pw) { errors.push((i+1) + '行目：名前・社員番号・パスワードは必須です'); continue; }
           var dept = csvDepts.find(function(d) { return d.name === deptName; });
           if (!dept) { errors.push((i+1) + '行目：部署「' + deptName + '」が見つかりません'); continue; }
+
+          // 店舗が指定されていたら、同部署内の店舗を検索してエリア名を自動決定
+          if (storeName) {
+            var deptAreaIds = csvAreas.filter(function(a) { return a.department_id === dept.id; }).map(function(a) { return a.id; });
+            var store = csvStores.find(function(s) { return s.name === storeName && deptAreaIds.indexOf(s.area_id) !== -1; });
+            if (!store) { errors.push((i+1) + '行目：部署「' + deptName + '」に店舗「' + storeName + '」が見つかりません'); continue; }
+            var areaObj = csvAreas.find(function(a) { return a.id === store.area_id; });
+            areaName = areaObj ? areaObj.name : null;
+          }
 
           var { data: authData, error: authError } = await adminClient.auth.admin.createUser({
             email: eid + '@education-app.com', password: pw, email_confirm: true
@@ -2390,8 +2436,8 @@
       } else if (csvImportType === 'store') {
         for (var i = 0; i < csvParsedData.length; i++) {
           var r = csvParsedData[i];
-          var name = (r[0]||'').trim(), deptName = (r[1]||'').trim(), areaName = (r[2]||'').trim();
-          if (!name || !deptName || !areaName) { errors.push((i+1) + '行目：店舗名・部署名・エリア名は必須です'); continue; }
+          var deptName = (r[0]||'').trim(), name = (r[1]||'').trim(), areaName = (r[2]||'').trim();
+          if (!name || !deptName || !areaName) { errors.push((i+1) + '行目：部署名・店舗名・エリア名は必須です'); continue; }
 
           var dept = csvDepts.find(function(d) { return d.name === deptName; });
           if (!dept) { errors.push((i+1) + '行目：部署「' + deptName + '」が見つかりません'); continue; }
@@ -2754,34 +2800,52 @@
       var list = document.getElementById('retest-list');
       list.innerHTML = '<div class="loading-text">読み込み中...</div>';
 
-      var retestQuery = client.from('test_results')
+      var resultsQuery = client.from('test_results')
         .select('user_id, category, grade, score, passed, taken_at, test_set_id')
-        .eq('passed', false).order('taken_at', { ascending: false });
+        .order('taken_at', { ascending: false });
       if (currentRole === 'dept_admin' && allowedMemberIds !== null && allowedMemberIds.length > 0) {
-        retestQuery = retestQuery.in('user_id', allowedMemberIds);
+        resultsQuery = resultsQuery.in('user_id', allowedMemberIds);
       }
 
-      var { data: results, error } = await retestQuery;
+      var { data: results, error } = await resultsQuery;
       if (error) { list.innerHTML = '<div class="loading-text">取得エラー</div>'; return; }
 
-      var { data: members }       = await client.from('user_profiles').select('id, name, store');
-      var { data: permissions }   = await client.from('retest_permissions').select('user_id, test_set_id, used_at').is('used_at', null);
-      var { data: passedResults } = await client.from('test_results').select('user_id, test_set_id').eq('passed', true);
-      var { data: testSets }      = await client.from('test_sets').select('id, name');
+      var { data: members }     = await client.from('user_profiles').select('id, name, store');
+      var { data: permissions } = await client.from('retest_permissions').select('user_id, test_set_id, used_at').is('used_at', null);
+      var { data: testSets }    = await client.from('test_sets').select('id, name, pass_score');
+      var { data: texts }       = await client.from('text_answers').select('user_id, test_set_id, score');
 
-      // 既に合格している (user_id × test_set_id) を除外
-      var passedKey = (passedResults || []).map(function(r) { return r.user_id + '_' + r.test_set_id; });
-      var filteredResults = (results || []).filter(function(r) {
-        return r.test_set_id != null && passedKey.indexOf(r.user_id + '_' + r.test_set_id) === -1;
-      });
-
-      // user_id × test_set_id ごとに最新1件に絞る（既に order 済み）
+      // user × test_set_id ごとに最新1件に絞る（既に order 済み）
       var seen = {};
-      filteredResults = filteredResults.filter(function(r) {
+      var latestResults = (results || []).filter(function(r) {
+        if (r.test_set_id == null) return false;
         var key = r.user_id + '_' + r.test_set_id;
         if (seen[key]) return false;
         seen[key] = true;
         return true;
+      });
+
+      // user × test_set_id ごとの記述採点状況を集計
+      var textSumBySet = {};   // 合計点
+      var textUngradedBySet = {};
+      (texts || []).forEach(function(t) {
+        if (t.test_set_id == null) return;
+        var key = t.user_id + '_' + t.test_set_id;
+        if (t.score === null || t.score === undefined) {
+          textUngradedBySet[key] = true;
+        } else {
+          textSumBySet[key] = (textSumBySet[key] || 0) + t.score;
+        }
+      });
+
+      // 合計点 < 合格基準 のみ残す。採点中（記述未採点あり）は除外。
+      var filteredResults = latestResults.filter(function(r) {
+        var key = r.user_id + '_' + r.test_set_id;
+        if (textUngradedBySet[key]) return false; // 採点中
+        var ts = (testSets || []).find(function(s) { return s.id === r.test_set_id; });
+        if (!ts) return false;
+        var total = (r.score || 0) + (textSumBySet[key] || 0);
+        return total < ts.pass_score;
       });
 
       if (!filteredResults || filteredResults.length === 0) {
@@ -2796,13 +2860,15 @@
         var date   = new Date(r.taken_at).toLocaleDateString('ja-JP');
         var ts     = (testSets || []).find(function(s) { return s.id === r.test_set_id; });
         var tsName = ts ? ts.name : '（問題集不明）';
+        var key    = r.user_id + '_' + r.test_set_id;
+        var total  = (r.score || 0) + (textSumBySet[key] || 0);
         var hasPermission = (permissions || []).some(function(p) {
           return p.user_id === r.user_id && p.test_set_id === r.test_set_id;
         });
 
         return '<tr>' +
           '<td>' + name + '</td><td>' + store + '</td><td>' + tsName + '</td>' +
-          '<td>' + r.grade + '等級</td><td>' + r.score + '点</td><td>' + date + '</td>' +
+          '<td>' + r.grade + '等級</td><td>' + total + '点</td><td>' + date + '</td>' +
           '<td>' + (hasPermission
             ? '<span style="font-size:12px;color:#2e7d32;font-weight:700">許可済み</span>'
             : '<button class="btn btn-primary btn-sm" onclick="permitRetest(\'' + r.user_id + '\',' + r.test_set_id + ',\'' + (r.category || '').replace(/'/g,"&#39;") + '\',' + r.grade + ')">再試験を許可</button>'
@@ -2811,7 +2877,7 @@
       }).join('');
 
       list.innerHTML = '<div class="card"><div class="card-body" style="padding:0">' +
-        '<table><thead><tr><th>名前</th><th>店舗</th><th>問題集</th><th>等級</th><th>点数</th><th>受験日</th><th></th></tr></thead>' +
+        '<table><thead><tr><th>名前</th><th>店舗</th><th>問題集</th><th>等級</th><th>合計点</th><th>受験日</th><th></th></tr></thead>' +
           '<tbody>' + rows + '</tbody></table></div></div>';
     }
 
@@ -2847,35 +2913,43 @@
         return;
       }
 
-      var { data: members } = await client.from('user_profiles').select('id, name');
+      var { data: members }   = await client.from('user_profiles').select('id, name');
+      // 問題ごとの配点を取得（question_id → point）
+      var qIds = data.map(function(r) { return r.question_id; }).filter(function(v) { return v != null; });
+      var pointByQ = {};
+      if (qIds.length > 0) {
+        var { data: qs } = await client.from('test_questions').select('id, point').in('id', qIds);
+        (qs || []).forEach(function(q) { pointByQ[q.id] = q.point || 0; });
+      }
 
       list.innerHTML = data.map(function(row) {
         var member = (members || []).find(function(m) { return m.id === row.user_id; });
         var memberName = member ? member.name : row.user_id;
         var isGraded = row.score !== null;
         var date = new Date(row.submitted_at).toLocaleDateString('ja-JP');
+        var maxPoint = (row.question_id != null && pointByQ[row.question_id] != null) ? pointByQ[row.question_id] : 100;
         return '<div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;margin-bottom:16px;overflow:hidden">' +
           '<div style="padding:14px 20px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between">' +
             '<div><span class="pill ' + (isGraded ? 'pill-green' : 'pill-yellow') + '" style="margin-right:8px">' + (isGraded ? '採点済み' : '未採点') + '</span><strong>' + memberName + '</strong></div>' +
             '<span style="font-size:12px;color:#9ca3af">' + date + ' 提出</span>' +
           '</div>' +
           '<div style="padding:16px 20px">' +
-            '<div style="font-size:12px;color:#6b7280;margin-bottom:8px">カテゴリ：' + row.category + ' ／ ' + row.grade + '等級</div>' +
+            '<div style="font-size:12px;color:#6b7280;margin-bottom:8px">カテゴリ：' + row.category + ' ／ ' + row.grade + '等級 ／ 配点：' + maxPoint + '点</div>' +
             '<div style="font-size:13px;color:#6b7280;margin-bottom:8px">問題：' + row.question + '</div>' +
             '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.7;margin-bottom:14px">' + row.answer + '</div>' +
             (isGraded
-              ? '<div style="font-size:13px;color:#2e7d32;font-weight:700">採点済み：' + row.score + '点</div>'
-              : '<div style="display:flex;align-items:center;gap:10px"><label style="font-size:13px">点数：</label><input type="number" min="0" max="100" placeholder="0〜100" id="score-' + row.id + '" style="width:80px"><button class="btn btn-primary btn-sm" onclick="saveScore(' + row.id + ')">保存</button></div>'
+              ? '<div style="font-size:13px;color:#2e7d32;font-weight:700">採点済み：' + row.score + ' / ' + maxPoint + '点</div>'
+              : '<div style="display:flex;align-items:center;gap:10px"><label style="font-size:13px">点数：</label><input type="number" min="0" max="' + maxPoint + '" placeholder="0〜' + maxPoint + '" id="score-' + row.id + '" style="width:80px"><span style="font-size:13px;color:#6b7280">/ ' + maxPoint + '点</span><button class="btn btn-primary btn-sm" onclick="saveScore(' + row.id + ',' + maxPoint + ')">保存</button></div>'
             ) +
           '</div>' +
         '</div>';
       }).join('');
     }
 
-    async function saveScore(id) {
+    async function saveScore(id, maxPoint) {
       var input = document.getElementById('score-' + id);
       var score = parseInt(input.value);
-      if (isNaN(score) || score < 0 || score > 100) { alert('0〜100の点数を入力してください'); return; }
+      if (isNaN(score) || score < 0 || score > maxPoint) { alert('0〜' + maxPoint + 'の点数を入力してください'); return; }
       var { error } = await client.from('text_answers').update({ score: score, graded_at: new Date().toISOString() }).eq('id', id);
       if (error) { console.error('保存エラー:', error.message); return; }
       showToast('採点を保存しました ✓');
