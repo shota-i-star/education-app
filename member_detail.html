@@ -283,29 +283,56 @@
       var curChecked = curStepIds.filter(function(id) { return checkedStepIds.indexOf(id) !== -1; }).length;
       var curProgress = curStepIds.length > 0 ? Math.round(curChecked / curStepIds.length * 100) : 0;
 
-      // ③ テスト結果を取得する
+      // ③ テスト結果を取得する（test_set_id / answers も含めて）
       var { data: results } = await client
         .from('test_results')
-        .select('category, grade, score, passed, taken_at')
+        .select('id, category, grade, score, passed, taken_at, test_set_id')
         .eq('user_id', TARGET_USER_ID)
         .order('taken_at', { ascending: false });
 
-      // ④ 記述式の点数を取得する
-      var { data: textScores } = await client
+      // ④ 記述式の回答・点数を取得する（test_set_id 単位で集計）
+      var { data: textRows } = await client
         .from('text_answers')
-        .select('score')
-        .eq('user_id', TARGET_USER_ID)
-        .not('score', 'is', null)
-        .limit(1);
+        .select('test_set_id, score')
+        .eq('user_id', TARGET_USER_ID);
 
-      var autoScore = (results && results.length > 0) ? results[0].score : null;
-      var descScore = (textScores && textScores.length > 0) ? textScores[0].score : null;
-      var totalScore = autoScore !== null ? (descScore !== null ? autoScore + descScore : autoScore) : null;
+      // test_set_id ごとの集計（採点済み合計点 / 未採点有無）
+      var textSumBySet = {};
+      var textUngradedBySet = {};
+      (textRows || []).forEach(function(t) {
+        if (t.test_set_id == null) return;
+        if (t.score === null || t.score === undefined) {
+          textUngradedBySet[t.test_set_id] = true;
+        } else {
+          textSumBySet[t.test_set_id] = (textSumBySet[t.test_set_id] || 0) + t.score;
+        }
+      });
+
+      // ⑤ 問題集情報（名前・合格基準点）を取得
+      var setIds = Array.from(new Set((results || []).map(function(r) { return r.test_set_id; }).filter(function(v) { return v != null; })));
+      var testSetById = {};
+      if (setIds.length > 0) {
+        var { data: sets } = await client
+          .from('test_sets').select('id, name, pass_score').in('id', setIds);
+        (sets || []).forEach(function(s) { testSetById[s.id] = s; });
+      }
+
+      // プロフィール用：最新テストの合計点（採点中は null 扱い）
+      var latestTotal = null;
+      if (results && results.length > 0) {
+        var r0 = results[0];
+        var sid0 = r0.test_set_id;
+        if (sid0 != null && textUngradedBySet[sid0]) {
+          latestTotal = null; // 採点中
+        } else {
+          latestTotal = (r0.score || 0) + (sid0 != null ? (textSumBySet[sid0] || 0) : 0);
+        }
+      }
 
       // 画面を描画する
-      renderProfile(member, overallProgress, curProgress, totalScore, results ? results.length : 0);
+      renderProfile(member, overallProgress, curProgress, latestTotal, results ? results.length : 0);
       renderCheckList(checkedStepIds, member.grade, categories || [], allItems || [], allSteps || []);
-      renderTestHistory(results || []);
+      renderTestHistory(results || [], textSumBySet, textUngradedBySet, testSetById);
       loadComments();
     }
 
@@ -423,7 +450,7 @@
     }
 
     // テスト受験履歴を描画する
-    function renderTestHistory(results) {
+    function renderTestHistory(results, textSumBySet, textUngradedBySet, testSetById) {
       if (results.length === 0) {
         document.getElementById('test-history').innerHTML = '<div class="loading-text">受験履歴がありません</div>';
         return;
@@ -431,22 +458,41 @@
 
       var rows = results.map(function(r) {
         var date = new Date(r.taken_at).toLocaleDateString('ja-JP');
-        var scoreClass = r.score >= 80 ? 'score-high' : 'score-low';
-        var passText = r.passed
-          ? '<span class="pass">合格</span>'
-          : '<span class="fail">未合格</span>';
+        var sid = r.test_set_id;
+        var ts  = (sid != null) ? testSetById[sid] : null;
+        var setName = ts ? ts.name : '（未設定）';
+        var passScore = ts ? ts.pass_score : null;
+
+        var isPending = sid != null && !!textUngradedBySet[sid];
+        var textSum   = sid != null ? (textSumBySet[sid] || 0) : 0;
+        var totalScore = (r.score || 0) + textSum;
+
+        var scoreCell, passCell;
+        if (isPending) {
+          scoreCell = '<td class="score-low">採点中</td>';
+          passCell  = '<td><span class="fail" style="background:#fef3cd;color:#856404">採点中</span></td>';
+        } else {
+          var finalPassed = (passScore != null) ? (totalScore >= passScore) : !!r.passed;
+          var scoreClass  = (passScore != null && totalScore >= passScore) ? 'score-high' : 'score-low';
+          scoreCell = '<td class="' + scoreClass + '">' + totalScore + '点</td>';
+          passCell  = finalPassed
+            ? '<td><span class="pass">合格</span></td>'
+            : '<td><span class="fail">未合格</span></td>';
+        }
+
         return '<tr>' +
           '<td>' + r.category + '</td>' +
+          '<td>' + setName + '</td>' +
           '<td>' + r.grade + '等級</td>' +
           '<td>' + date + '</td>' +
-          '<td class="' + scoreClass + '">' + r.score + '点</td>' +
-          '<td>' + passText + '</td>' +
+          scoreCell +
+          passCell +
         '</tr>';
       }).join('');
 
       document.getElementById('test-history').innerHTML =
         '<table>' +
-          '<thead><tr><th>カテゴリ</th><th>等級</th><th>受験日</th><th>点数</th><th>合否</th></tr></thead>' +
+          '<thead><tr><th>カテゴリ</th><th>問題集</th><th>等級</th><th>受験日</th><th>点数</th><th>合否</th></tr></thead>' +
           '<tbody>' + rows + '</tbody>' +
         '</table>';
     }

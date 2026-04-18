@@ -152,6 +152,7 @@
     var QUESTIONS = [];            // [{ q, choices:[{id,body,is_correct}] }]
     var ANSWERS   = {};            // { question_id: 値 }
     var SUBMITTED = false;         // 既に提出済み（再試験不可）
+    var IS_PENDING_GRADING = false; // 記述式の採点待ち中（再受験不可）
 
     function getParam(name) {
       var m = new RegExp('[?&]' + name + '=([^&]+)').exec(location.search);
@@ -236,23 +237,37 @@
         '<span>合計配点：' + totalPoints + '点</span>' +
         '<span class="pass-badge">合格基準：' + TEST_SET.pass_score + '点以上</span>';
 
-      // 提出済みチェック（再試験許可があれば受験可能）
+      // 提出済みチェック
       var { data: results } = await client
         .from('test_results').select('id, score, passed, answers, taken_at')
         .eq('user_id', CURRENT_USER).eq('test_set_id', setId)
         .order('taken_at', { ascending: false }).limit(1);
-
       var latest = (results && results[0]) ? results[0] : null;
 
-      if (latest) {
-        var canRetest = await checkRetestPermission(setId);
+      // 採点中チェック：未採点の記述式回答が1件でもあれば採点中
+      var { data: ungradedTexts } = await client
+        .from('text_answers').select('id')
+        .eq('user_id', CURRENT_USER).eq('test_set_id', setId)
+        .is('score', null).limit(1);
+      IS_PENDING_GRADING = !!(ungradedTexts && ungradedTexts.length > 0);
+
+      if (latest || IS_PENDING_GRADING) {
+        // 採点中は再試験許可があっても絶対に受験不可
+        var canRetest = IS_PENDING_GRADING ? false : await checkRetestPermission(setId);
         if (canRetest) {
           document.getElementById('retest-notice').style.display = 'block';
           renderQuestions(false);
         } else {
           SUBMITTED = true;
           renderQuestions(true);
-          await showPastResult(latest);
+          if (latest) {
+            await showPastResult(latest);
+          } else if (IS_PENDING_GRADING) {
+            // 採点中だが test_results が無い稀なケース：採点中表示のみ
+            renderResult(0, false, true);
+            document.getElementById('progress-wrap').style.display = 'none';
+            document.getElementById('submit-area').style.display = 'none';
+          }
         }
       } else {
         renderQuestions(false);
@@ -377,8 +392,42 @@
         return;
       }
 
+      // 既に提出済みなら送信不可（二重クリック・DevTools経由の再送信を防ぐ）
+      if (SUBMITTED) { return; }
+
       document.getElementById('btn-submit').disabled = true;
       document.getElementById('loading').style.display = 'block';
+
+      // 二重送信ガード①：未採点の記述式回答が残っている → 採点中なので送信不可
+      var { data: dupTexts } = await client
+        .from('text_answers').select('id')
+        .eq('user_id', CURRENT_USER).eq('test_set_id', TEST_SET.id)
+        .is('score', null).limit(1);
+      if (dupTexts && dupTexts.length > 0) {
+        document.getElementById('loading').style.display = 'none';
+        alert('前回の回答が採点中のため、再受験できません。採点完了までお待ちください。');
+        SUBMITTED = true;
+        disableAllInputs();
+        return;
+      }
+
+      // 二重送信ガード②：test_results が既に存在する場合、未使用の retest_permissions が無ければ送信不可
+      var { data: existResults } = await client
+        .from('test_results').select('id')
+        .eq('user_id', CURRENT_USER).eq('test_set_id', TEST_SET.id).limit(1);
+      if (existResults && existResults.length > 0) {
+        var { data: unusedPerms } = await client
+          .from('retest_permissions').select('id')
+          .eq('user_id', CURRENT_USER).eq('test_set_id', TEST_SET.id)
+          .is('used_at', null).limit(1);
+        if (!unusedPerms || unusedPerms.length === 0) {
+          document.getElementById('loading').style.display = 'none';
+          alert('このテストは既に受験済みです。再試験には管理者の許可が必要です。');
+          SUBMITTED = true;
+          disableAllInputs();
+          return;
+        }
+      }
 
       // 自動採点（choice / truefalse のみ）
       var autoScore = 0;
@@ -404,11 +453,15 @@
         answersPayload[q.id] = { type: q.type, answer: v, correct: correct };
       });
 
-      // 記述式がある場合は採点確定まで passed を null にする（採点中）
-      var passed = hasText ? null : (autoScore >= TEST_SET.pass_score);
+      // 合否（表示用）
+      //  ・記述式がある場合：最終合否は採点後に合計点で再計算されるため、ここでは暫定で false を保存
+      //  　（passed が NOT NULL 制約でも insert が失敗しないようにする）
+      //  ・記述式がない場合：この場で確定
+      var passedStored = hasText ? false : (autoScore >= TEST_SET.pass_score);
+      var isPendingAfterSubmit = hasText;
 
       // 結果表示（記述があるときは採点中）
-      renderResult(autoScore, passed === true, hasText);
+      renderResult(autoScore, (!hasText && passedStored), isPendingAfterSubmit);
       disableAllInputs();
       revealCorrectness();
 
@@ -419,10 +472,16 @@
         grade:       TEST_SET.grade,
         test_set_id: TEST_SET.id,
         score:       autoScore,
-        passed:      passed,
+        passed:      passedStored,
         answers:     answersPayload
       });
-      if (err1) console.error('test_results 保存エラー:', err1.message);
+      if (err1) {
+        console.error('test_results 保存エラー:', err1.message);
+        alert('テスト結果の保存に失敗しました。管理者に連絡してください。\n' + err1.message);
+        return;
+      }
+      // 提出完了後は二度と送信できないようフラグを立てる
+      SUBMITTED = true;
 
       // 記述式回答を question_id 単位で保存
       var textRows = QUESTIONS.filter(function(q) { return q.type === 'text'; }).map(function(q) {
