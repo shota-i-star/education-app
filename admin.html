@@ -307,6 +307,44 @@
     </div>
   </div>
 
+  <!-- 問題集編集モーダル -->
+  <div class="modal-overlay" id="edit-testset-modal">
+    <div class="modal">
+      <h3>問題集を編集</h3>
+      <div class="modal-field">
+        <label>問題集名</label>
+        <input type="text" id="edit-testset-name">
+      </div>
+      <div class="modal-field">
+        <label>部署</label>
+        <select id="edit-testset-dept" onchange="updateEditTestSetCategories()"></select>
+      </div>
+      <div class="modal-field">
+        <label>カテゴリ</label>
+        <select id="edit-testset-category"></select>
+      </div>
+      <div class="modal-field">
+        <label>対象等級</label>
+        <select id="edit-testset-grade">
+          <option value="0">0等級</option>
+          <option value="1">1等級</option>
+          <option value="2">2等級</option>
+          <option value="3">3等級</option>
+          <option value="4">4等級</option>
+          <option value="5">5等級</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>合格基準点</label>
+        <input type="number" id="edit-testset-pass" style="width:80px"> <span style="font-size:13px;color:#6b7280">点以上</span>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('edit-testset-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveTestSet()">保存する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 問題追加モーダル -->
   <div class="modal-overlay" id="add-question-modal">
     <div class="modal">
@@ -358,6 +396,61 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal('add-question-modal')">キャンセル</button>
         <button class="btn btn-primary" onclick="addQuestion()">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 問題編集モーダル -->
+  <div class="modal-overlay" id="edit-question-modal">
+    <div class="modal">
+      <h3>問題を編集</h3>
+      <div class="modal-field">
+        <label>問題文</label>
+        <input type="text" id="edit-question-text">
+      </div>
+      <div class="modal-field">
+        <label>形式</label>
+        <select id="edit-question-type" onchange="toggleEditChoices()">
+          <option value="choice">4択</option>
+          <option value="truefalse">○×</option>
+          <option value="text">記述</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>配点</label>
+        <input type="number" id="edit-question-point" style="width:80px"> <span style="font-size:13px;color:#6b7280">点</span>
+      </div>
+      <div id="edit-tf-area" class="modal-field" style="display:none">
+        <label>正解</label>
+        <div style="display:flex;gap:12px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="radio" name="edit-tf-correct" value="maru"> ○（正しい）</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="radio" name="edit-tf-correct" value="batu"> ×（間違い）</label>
+        </div>
+      </div>
+      <div id="edit-choices-area" class="modal-field">
+        <label>選択肢（正解に✓をつける）</label>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="form-row" style="align-items:center">
+            <input type="checkbox" id="ec1-correct" style="width:16px;height:16px;flex-shrink:0">
+            <input type="text" id="ec1-text" placeholder="選択肢1">
+          </div>
+          <div class="form-row" style="align-items:center">
+            <input type="checkbox" id="ec2-correct" style="width:16px;height:16px;flex-shrink:0">
+            <input type="text" id="ec2-text" placeholder="選択肢2">
+          </div>
+          <div class="form-row" style="align-items:center">
+            <input type="checkbox" id="ec3-correct" style="width:16px;height:16px;flex-shrink:0">
+            <input type="text" id="ec3-text" placeholder="選択肢3">
+          </div>
+          <div class="form-row" style="align-items:center">
+            <input type="checkbox" id="ec4-correct" style="width:16px;height:16px;flex-shrink:0">
+            <input type="text" id="ec4-text" placeholder="選択肢4">
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('edit-question-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveQuestion()">保存する</button>
       </div>
     </div>
   </div>
@@ -1234,13 +1327,19 @@
               ? setQuestions.map(function(q) {
                   return '<tr>' +
                     '<td>' + q.question + '</td>' +
-                    '<td><span class="pill ' + (typePills[q.type] || 'pill-gray') + '">' + (typeLabels[q.type] || q.type) + '</span></td>' +
-                    '<td>' + (q.point || 0) + '点</td>' +
-                    '<td><button class="btn btn-danger btn-sm" onclick="deleteQuestion(' + q.id + ')">削除</button></td>' +
+                    '<td style="text-align:right;white-space:nowrap"><span class="pill ' + (typePills[q.type] || 'pill-gray') + '">' + (typeLabels[q.type] || q.type) + '</span></td>' +
+                    '<td style="text-align:right;white-space:nowrap">' + (q.point || 0) + '点</td>' +
+                    '<td style="text-align:right;white-space:nowrap">' +
+                      '<button class="btn btn-secondary btn-sm" onclick="openEditQuestionModal(' + q.id + ')">編集</button>' +
+                    '</td>' +
+                    '<td style="text-align:right;white-space:nowrap">' +
+                      '<button class="btn btn-danger btn-sm" onclick="deleteQuestion(' + q.id + ')">削除</button>' +
+                    '</td>' +
                   '</tr>';
                 }).join('')
-              : '<tr><td colspan="4" style="color:#9ca3af;font-size:13px">問題がありません</td></tr>';
+              : '<tr><td colspan="5" style="color:#9ca3af;font-size:13px">問題がありません</td></tr>';
 
+            var setNameEsc = s.name.replace(/'/g,"&#39;");
             return '<div class="card" style="margin-bottom:12px">' +
               '<div class="card-header">' +
                 '<div>' +
@@ -1249,11 +1348,12 @@
                 '</div>' +
                 '<div style="display:flex;gap:8px">' +
                   '<button class="btn btn-primary btn-sm" onclick="openAddQuestionModal(' + s.id + ')">＋ 問題を追加</button>' +
-                  '<button class="btn btn-danger btn-sm" onclick="deleteTestSet(' + s.id + ', \'' + s.name + '\')">削除</button>' +
+                  '<button class="btn btn-secondary btn-sm" onclick="openEditTestSetModal(' + s.id + ')">編集</button>' +
+                  '<button class="btn btn-danger btn-sm" onclick="deleteTestSet(' + s.id + ', \'' + setNameEsc + '\')">削除</button>' +
                 '</div>' +
               '</div>' +
               '<div class="card-body" style="padding:0">' +
-                '<table><thead><tr><th>問題文</th><th>形式</th><th>配点</th><th></th></tr></thead>' +
+                '<table><thead><tr><th>問題文</th><th style="text-align:right">形式</th><th style="text-align:right">配点</th><th style="text-align:right"></th><th style="text-align:right"></th></tr></thead>' +
                   '<tbody>' + qRows + '</tbody>' +
                 '</table>' +
               '</div>' +
@@ -1353,6 +1453,98 @@
       loadTests();
     }
 
+    // ============================================
+    // 問題集を編集する
+    // ============================================
+    var currentEditTestSetId = null;
+
+    async function openEditTestSetModal(setId) {
+      currentEditTestSetId = setId;
+
+      // 問題集・部署・カテゴリ・中間テーブルを取得
+      var { data: setRows } = await client.from('test_sets')
+        .select('id, name, category_id, grade, pass_score').eq('id', setId).limit(1);
+      if (!setRows || setRows.length === 0) { alert('問題集が見つかりません'); return; }
+      var ts = setRows[0];
+
+      var { data: depts }         = await client.from('departments').select('id, name').order('id');
+      var { data: allCategories } = await client.from('categories').select('id, name').order('id');
+      var { data: catDepts }      = await client.from('category_departments').select('category_id, department_id');
+
+      testSetCategoriesCache = allCategories || [];
+      testSetCatDeptsCache   = catDepts || [];
+
+      // dept_admin は自部署のみ
+      var visibleDepts = depts || [];
+      if (currentRole === 'dept_admin' && currentDeptId) {
+        visibleDepts = visibleDepts.filter(function(d) { return d.id === currentDeptId; });
+      }
+
+      // 現在のカテゴリから部署を逆引き
+      var currentDeptIdOfCat = null;
+      var cdRow = (catDepts || []).find(function(cd) { return cd.category_id === ts.category_id; });
+      if (cdRow) currentDeptIdOfCat = cdRow.department_id;
+
+      var deptSel = document.getElementById('edit-testset-dept');
+      deptSel.innerHTML = visibleDepts.map(function(d) {
+        return '<option value="' + d.id + '">' + d.name + '</option>';
+      }).join('');
+      if (currentDeptIdOfCat != null) deptSel.value = String(currentDeptIdOfCat);
+
+      updateEditTestSetCategories();
+
+      // カテゴリを選択
+      document.getElementById('edit-testset-category').value = String(ts.category_id);
+
+      document.getElementById('edit-testset-name').value  = ts.name || '';
+      document.getElementById('edit-testset-grade').value = String(ts.grade);
+      document.getElementById('edit-testset-pass').value  = ts.pass_score != null ? String(ts.pass_score) : '80';
+
+      document.getElementById('edit-testset-modal').classList.add('show');
+    }
+
+    function updateEditTestSetCategories() {
+      var deptId = parseInt(document.getElementById('edit-testset-dept').value);
+      var deptCatIds = testSetCatDeptsCache
+        .filter(function(cd) { return cd.department_id === deptId; })
+        .map(function(cd) { return cd.category_id; });
+      var cats = testSetCategoriesCache.filter(function(c) { return deptCatIds.indexOf(c.id) !== -1; });
+
+      var sel = document.getElementById('edit-testset-category');
+      if (cats.length === 0) {
+        sel.innerHTML = '<option value="">（この部署にはカテゴリがありません）</option>';
+      } else {
+        sel.innerHTML = cats.map(function(c) {
+          return '<option value="' + c.id + '">' + c.name + '</option>';
+        }).join('');
+      }
+    }
+
+    async function saveTestSet() {
+      if (!currentEditTestSetId) { alert('問題集が選択されていません'); return; }
+      var name   = document.getElementById('edit-testset-name').value.trim();
+      var catVal = document.getElementById('edit-testset-category').value;
+      var catId  = parseInt(catVal);
+      var grade  = parseInt(document.getElementById('edit-testset-grade').value);
+      var pass   = parseInt(document.getElementById('edit-testset-pass').value);
+      if (!name) { alert('問題集名を入力してください'); return; }
+      if (!catVal || isNaN(catId)) { alert('カテゴリを選択してください'); return; }
+
+      var { error } = await client.from('test_sets').update({
+        name: name, category_id: catId, grade: grade, pass_score: pass
+      }).eq('id', currentEditTestSetId);
+      if (error) { alert('保存エラー：' + error.message); return; }
+
+      // カテゴリ・等級が変わった場合は配下の test_questions も追随させる
+      await client.from('test_questions').update({
+        category_id: catId, grade: grade
+      }).eq('test_set_id', currentEditTestSetId);
+
+      closeModal('edit-testset-modal');
+      showToast(name + ' を更新しました ✓');
+      loadTests();
+    }
+
     async function deleteTestSet(id, name) {
       if (!confirm(name + ' を削除しますか？\n問題もすべて削除されます。')) return;
       var { data: qs } = await client.from('test_questions').select('id').eq('test_set_id', id);
@@ -1425,6 +1617,97 @@
 
       closeModal('add-question-modal');
       showToast('問題を追加しました ✓');
+      loadTests();
+    }
+
+    // ============================================
+    // 問題を編集する
+    // ============================================
+    var currentEditQuestionId = null;
+
+    function toggleEditChoices() {
+      var type = document.getElementById('edit-question-type').value;
+      document.getElementById('edit-choices-area').style.display = type === 'choice'    ? 'block' : 'none';
+      document.getElementById('edit-tf-area').style.display      = type === 'truefalse' ? 'block' : 'none';
+    }
+
+    async function openEditQuestionModal(qId) {
+      currentEditQuestionId = qId;
+
+      var { data: qRows } = await client.from('test_questions')
+        .select('id, question, type, point').eq('id', qId).limit(1);
+      if (!qRows || qRows.length === 0) { alert('問題が見つかりません'); return; }
+      var q = qRows[0];
+
+      document.getElementById('edit-question-text').value  = q.question || '';
+      document.getElementById('edit-question-type').value  = q.type || 'choice';
+      document.getElementById('edit-question-point').value = q.point != null ? String(q.point) : '10';
+
+      // 選択肢のリセット
+      [1,2,3,4].forEach(function(n) {
+        document.getElementById('ec' + n + '-text').value    = '';
+        document.getElementById('ec' + n + '-correct').checked = false;
+      });
+      document.querySelectorAll('input[name="edit-tf-correct"]').forEach(function(el) { el.checked = false; });
+
+      // 選択肢データを取得
+      var { data: choices } = await client.from('test_choices')
+        .select('id, body, is_correct').eq('question_id', qId).order('id');
+      choices = choices || [];
+
+      if (q.type === 'choice') {
+        choices.slice(0, 4).forEach(function(c, idx) {
+          var n = idx + 1;
+          document.getElementById('ec' + n + '-text').value    = c.body || '';
+          document.getElementById('ec' + n + '-correct').checked = !!c.is_correct;
+        });
+      } else if (q.type === 'truefalse') {
+        var correctChoice = choices.find(function(c) { return c.is_correct; });
+        if (correctChoice) {
+          var target = document.querySelector('input[name="edit-tf-correct"][value="' + correctChoice.body + '"]');
+          if (target) target.checked = true;
+        }
+      }
+
+      toggleEditChoices();
+      document.getElementById('edit-question-modal').classList.add('show');
+    }
+
+    async function saveQuestion() {
+      if (!currentEditQuestionId) { alert('問題が選択されていません'); return; }
+      var text  = document.getElementById('edit-question-text').value.trim();
+      var type  = document.getElementById('edit-question-type').value;
+      var point = parseInt(document.getElementById('edit-question-point').value);
+      if (!text) { alert('問題文を入力してください'); return; }
+
+      var { error } = await client.from('test_questions').update({
+        question: text, type: type, point: point
+      }).eq('id', currentEditQuestionId);
+      if (error) { alert('保存エラー：' + error.message); return; }
+
+      // 選択肢は一旦削除して作り直す（編集時にタイプ変更もあり得るため）
+      await client.from('test_choices').delete().eq('question_id', currentEditQuestionId);
+
+      if (type === 'choice') {
+        var choices = [1,2,3,4].map(function(n) {
+          return {
+            question_id: currentEditQuestionId,
+            body:        document.getElementById('ec' + n + '-text').value.trim(),
+            is_correct:  document.getElementById('ec' + n + '-correct').checked
+          };
+        }).filter(function(c) { return c.body; });
+        if (choices.length > 0) await client.from('test_choices').insert(choices);
+      } else if (type === 'truefalse') {
+        var tfCorrect = (document.querySelector('input[name="edit-tf-correct"]:checked') || {}).value;
+        if (!tfCorrect) { alert('○×問題の正解を選択してください'); return; }
+        await client.from('test_choices').insert([
+          { question_id: currentEditQuestionId, body: 'maru', is_correct: tfCorrect === 'maru' },
+          { question_id: currentEditQuestionId, body: 'batu', is_correct: tfCorrect === 'batu' }
+        ]);
+      }
+
+      closeModal('edit-question-modal');
+      showToast('問題を更新しました ✓');
       loadTests();
     }
 
@@ -2939,7 +3222,7 @@
             '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.7;margin-bottom:14px">' + row.answer + '</div>' +
             (isGraded
               ? '<div style="font-size:13px;color:#2e7d32;font-weight:700">採点済み：' + row.score + ' / ' + maxPoint + '点</div>'
-              : '<div style="display:flex;align-items:center;gap:10px"><label style="font-size:13px">点数：</label><input type="number" min="0" max="' + maxPoint + '" placeholder="0〜' + maxPoint + '" id="score-' + row.id + '" style="width:80px"><span style="font-size:13px;color:#6b7280">/ ' + maxPoint + '点</span><button class="btn btn-primary btn-sm" onclick="saveScore(' + row.id + ',' + maxPoint + ')">保存</button></div>'
+              : '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label style="font-size:13px;white-space:nowrap">点数：</label><input type="number" min="0" max="' + maxPoint + '" placeholder="0〜' + maxPoint + '" id="score-' + row.id + '" style="width:110px;padding:6px 8px;font-size:14px;box-sizing:border-box"><span style="font-size:13px;color:#6b7280;white-space:nowrap">/ ' + maxPoint + '点</span><button class="btn btn-primary btn-sm" onclick="saveScore(' + row.id + ',' + maxPoint + ')">保存</button></div>'
             ) +
           '</div>' +
         '</div>';
