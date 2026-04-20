@@ -179,6 +179,7 @@
         <div class="sidenav-label">採点</div>
         <button class="sidenav-item" onclick="switchPage('grading', this)">記述式採点</button>
         <button class="sidenav-item" onclick="switchPage('retest', this)">再試験管理</button>
+        <button class="sidenav-item" onclick="switchPage('test-results', this)">テスト結果</button>
       </div>
       <div class="sidenav-section">
         <div class="sidenav-label">組織</div>
@@ -232,6 +233,13 @@
         <h2>再試験管理</h2>
         <p class="page-desc">不合格メンバーに再試験を許可します。</p>
         <div id="retest-list"><div class="loading-text">読み込み中...</div></div>
+      </div>
+
+      <!-- テスト結果ページ -->
+      <div class="page" id="page-test-results">
+        <h2>テスト結果</h2>
+        <p class="page-desc">問題集ごとに、メンバーの受講状況・点数・回答内容を確認できます。</p>
+        <div id="test-results-list"><div class="loading-text">読み込み中...</div></div>
       </div>
 
       <!-- カテゴリ・項目管理 -->
@@ -3240,6 +3248,293 @@
     }
 
     // ============================================
+    // テスト結果
+    // ============================================
+    var testResultsCache = null; // { testSets, members, results, texts, questionsBySet }
+
+    async function loadTestResults() {
+      var list = document.getElementById('test-results-list');
+      list.innerHTML = '<div class="loading-text">読み込み中...</div>';
+
+      // 1) 対象部署の test_sets を絞り込む
+      //    test_sets.category_id → category_departments.department_id で部署紐付け
+      var { data: testSets, error: tsErr } = await client
+        .from('test_sets')
+        .select('id, name, category_id, grade, pass_score')
+        .order('grade', { ascending: true });
+      if (tsErr) { list.innerHTML = '<div class="loading-text">取得エラー</div>'; return; }
+
+      var { data: categories } = await client.from('categories').select('id, name');
+      var { data: catDepts }   = await client.from('category_departments').select('category_id, department_id');
+
+      var filteredTestSets = testSets || [];
+      if (currentRole === 'dept_admin' && currentDeptId) {
+        var myCatIds = (catDepts || [])
+          .filter(function(cd) { return cd.department_id === currentDeptId; })
+          .map(function(cd) { return cd.category_id; });
+        filteredTestSets = filteredTestSets.filter(function(ts) {
+          return myCatIds.indexOf(ts.category_id) !== -1;
+        });
+      }
+
+      if (filteredTestSets.length === 0) {
+        list.innerHTML = '<div class="loading-text">対象の問題集がありません</div>';
+        return;
+      }
+
+      // 2) 対象メンバー
+      var membersQuery = client.from('user_profiles')
+        .select('id, name, store, department_id, grade')
+        .eq('role', 'member');
+      if (currentRole === 'dept_admin' && allowedMemberIds !== null) {
+        if (allowedMemberIds.length === 0) {
+          list.innerHTML = '<div class="loading-text">自部署にメンバーがいません</div>';
+          return;
+        }
+        membersQuery = membersQuery.in('id', allowedMemberIds);
+      }
+      var { data: members } = await membersQuery;
+
+      // 3) test_results / text_answers を対象範囲で取得
+      var setIds    = filteredTestSets.map(function(s) { return s.id; });
+      var memberIds = (members || []).map(function(m) { return m.id; });
+
+      var results = [];
+      var texts   = [];
+      if (setIds.length > 0 && memberIds.length > 0) {
+        var resQ = await client.from('test_results')
+          .select('id, user_id, test_set_id, score, passed, taken_at, answers')
+          .in('test_set_id', setIds).in('user_id', memberIds)
+          .order('taken_at', { ascending: false });
+        results = resQ.data || [];
+
+        var txtQ = await client.from('text_answers')
+          .select('id, user_id, test_set_id, question_id, question, answer, score, submitted_at, graded_at')
+          .in('test_set_id', setIds).in('user_id', memberIds);
+        texts = txtQ.data || [];
+      }
+
+      // 4) 問題情報（各問題集の questions と choices）
+      var { data: questions } = await client.from('test_questions')
+        .select('id, test_set_id, question, type, point')
+        .in('test_set_id', setIds.length > 0 ? setIds : [-1])
+        .order('id');
+      var qIds = (questions || []).map(function(q) { return q.id; });
+      var choices = [];
+      if (qIds.length > 0) {
+        var cQ = await client.from('test_choices').select('id, question_id, body, is_correct').in('question_id', qIds);
+        choices = cQ.data || [];
+      }
+
+      testResultsCache = {
+        testSets:   filteredTestSets,
+        members:    members || [],
+        results:    results,
+        texts:      texts,
+        questions:  questions || [],
+        choices:    choices,
+        categories: categories || []
+      };
+
+      renderTestResults();
+    }
+
+    function renderTestResults() {
+      var data = testResultsCache;
+      if (!data) return;
+      var list = document.getElementById('test-results-list');
+
+      // user × test_set_id → 最新の test_results
+      var latestBySetUser = {};
+      data.results.forEach(function(r) {
+        var k = r.test_set_id + '_' + r.user_id;
+        if (!latestBySetUser[k]) latestBySetUser[k] = r; // results は taken_at DESC 済
+      });
+
+      // user × test_set_id → 記述式の合計点 / 未採点フラグ
+      var textSumBySet = {}, textUngradedBySet = {}, textsBySetUser = {};
+      data.texts.forEach(function(t) {
+        var k = t.test_set_id + '_' + t.user_id;
+        if (!textsBySetUser[k]) textsBySetUser[k] = [];
+        textsBySetUser[k].push(t);
+        if (t.score === null || t.score === undefined) textUngradedBySet[k] = true;
+        else textSumBySet[k] = (textSumBySet[k] || 0) + t.score;
+      });
+
+      var html = data.testSets.map(function(ts) {
+        var cat = (data.categories || []).find(function(c) { return c.id === ts.category_id; });
+        var catName = cat ? cat.name : '';
+
+        // 問題集の満点（配点合計）
+        var maxScore = data.questions
+          .filter(function(q) { return q.test_set_id === ts.id; })
+          .reduce(function(s, q) { return s + (q.point || 0); }, 0);
+
+        // 等級で絞り込んだメンバーが「対象」。等級 >= ts.grade のメンバーが受ける想定。
+        var scopeMembers = data.members.filter(function(m) { return (m.grade || 0) >= ts.grade; });
+
+        // 集計
+        var takenCount = 0, passCount = 0, failCount = 0, pendingCount = 0;
+        scopeMembers.forEach(function(m) {
+          var k = ts.id + '_' + m.id;
+          if (latestBySetUser[k]) {
+            takenCount++;
+            if (textUngradedBySet[k]) pendingCount++;
+            else {
+              var total = (latestBySetUser[k].score || 0) + (textSumBySet[k] || 0);
+              if (total >= ts.pass_score) passCount++; else failCount++;
+            }
+          }
+        });
+
+        // メンバー行
+        var rows = scopeMembers.map(function(m) {
+          var k = ts.id + '_' + m.id;
+          var r = latestBySetUser[k];
+          var badge, scoreTxt, dateTxt, detailBtn;
+          if (!r) {
+            badge = '<span class="pill" style="background:#f3f4f6;color:#6b7280">未受講</span>';
+            scoreTxt = '—';
+            dateTxt  = '—';
+            detailBtn = '';
+          } else {
+            var total = (r.score || 0) + (textSumBySet[k] || 0);
+            if (textUngradedBySet[k]) {
+              badge = '<span class="pill pill-yellow">採点中</span>';
+            } else if (total >= ts.pass_score) {
+              badge = '<span class="pill pill-green">合格</span>';
+            } else {
+              badge = '<span class="pill" style="background:#fde8e9;color:#bd3c40">不合格</span>';
+            }
+            scoreTxt = total + ' / ' + (maxScore || 100) + '点';
+            dateTxt  = new Date(r.taken_at).toLocaleDateString('ja-JP');
+            detailBtn = '<button class="btn btn-sm" style="background:#eef0fa;color:#495e9f;border:1px solid #c7d0f0" onclick="toggleAnswerDetail(' + ts.id + ',\'' + m.id + '\', this)">詳細</button>';
+          }
+          return '<tr>' +
+            '<td>' + (m.name || '—') + '</td>' +
+            '<td>' + (m.store || '未設定') + '</td>' +
+            '<td>' + badge + '</td>' +
+            '<td style="text-align:right">' + scoreTxt + '</td>' +
+            '<td>' + dateTxt + '</td>' +
+            '<td style="text-align:right">' + detailBtn + '</td>' +
+          '</tr>' +
+          '<tr id="detail-row-' + ts.id + '-' + m.id + '" style="display:none"><td colspan="6" style="padding:0;background:#fafafa"><div id="detail-body-' + ts.id + '-' + m.id + '" style="padding:14px 18px"></div></td></tr>';
+        }).join('');
+
+        if (scopeMembers.length === 0) {
+          rows = '<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:20px">対象メンバーがいません</td></tr>';
+        }
+
+        return '<div class="card" style="margin-bottom:14px">' +
+          '<div style="padding:14px 18px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f9fafb;border-bottom:1px solid #e5e7eb" onclick="toggleTestResultCard(' + ts.id + ', this)">' +
+            '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+              '<span class="toggle-arrow" style="display:inline-block;transition:transform .2s">▶</span>' +
+              '<strong style="font-size:15px">' + ts.name + '</strong>' +
+              '<span style="font-size:12px;color:#6b7280">' + catName + ' ／ ' + ts.grade + '等級 ／ 合格基準 ' + ts.pass_score + '点</span>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+              '<span class="pill" style="background:#eef0fa;color:#495e9f">受講 ' + takenCount + '/' + scopeMembers.length + '</span>' +
+              '<span class="pill pill-green">合格 ' + passCount + '</span>' +
+              '<span class="pill" style="background:#fde8e9;color:#bd3c40">不合格 ' + failCount + '</span>' +
+              (pendingCount > 0 ? '<span class="pill pill-yellow">採点中 ' + pendingCount + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div id="ts-body-' + ts.id + '" style="display:none">' +
+            '<div class="card-body" style="padding:0"><table>' +
+              '<thead><tr><th>名前</th><th>店舗</th><th>ステータス</th><th style="text-align:right">合計点</th><th>受験日</th><th></th></tr></thead>' +
+              '<tbody>' + rows + '</tbody>' +
+            '</table></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      list.innerHTML = html;
+    }
+
+    function toggleTestResultCard(tsId, headerEl) {
+      var body  = document.getElementById('ts-body-' + tsId);
+      var arrow = headerEl.querySelector('.toggle-arrow');
+      if (body.style.display === 'none') {
+        body.style.display = '';
+        if (arrow) arrow.style.transform = 'rotate(90deg)';
+      } else {
+        body.style.display = 'none';
+        if (arrow) arrow.style.transform = '';
+      }
+    }
+
+    function toggleAnswerDetail(tsId, userId, btn) {
+      var row  = document.getElementById('detail-row-' + tsId + '-' + userId);
+      var body = document.getElementById('detail-body-' + tsId + '-' + userId);
+      if (row.style.display !== 'none') {
+        row.style.display = 'none';
+        btn.textContent = '詳細';
+        return;
+      }
+
+      var data = testResultsCache;
+      var result = data.results.find(function(r) {
+        return r.test_set_id === tsId && r.user_id === userId;
+      });
+      if (!result) { row.style.display = ''; body.innerHTML = '<div style="color:#9ca3af">データがありません</div>'; return; }
+
+      var qs = data.questions.filter(function(q) { return q.test_set_id === tsId; });
+      qs.sort(function(a, b) { return a.id - b.id; });
+      var answersMap = result.answers || {};
+
+      // text_answers を user × question_id で引く
+      var textByQ = {};
+      data.texts.filter(function(t) { return t.test_set_id === tsId && t.user_id === userId; })
+        .forEach(function(t) { textByQ[t.question_id] = t; });
+
+      var items = qs.map(function(q, idx) {
+        var entry = answersMap[q.id] || {};
+        var userAns = entry.answer;
+        var header = '<div style="font-weight:700;margin-bottom:6px">問題 ' + (idx + 1) + '（' + q.point + '点）</div>' +
+                     '<div style="font-size:13px;color:#374151;margin-bottom:8px">' + (q.question || '') + '</div>';
+        var ansHtml = '';
+        if (q.type === 'choice') {
+          var cs = data.choices.filter(function(c) { return c.question_id === q.id; });
+          var correct = cs.find(function(c) { return c.is_correct; });
+          var picked  = cs.find(function(c) { return c.id === userAns; });
+          var ok = entry.correct === true;
+          ansHtml =
+            '<div style="font-size:13px;margin-bottom:4px">回答：<span style="font-weight:700;color:' + (ok ? '#2e7d32' : '#bd3c40') + '">' + (picked ? picked.body : '（未回答）') + '</span> ' +
+              '<span class="pill ' + (ok ? 'pill-green' : 'pill-yellow') + '" style="margin-left:6px">' + (ok ? '正解' : '不正解') + '</span></div>' +
+            '<div style="font-size:12px;color:#6b7280">正解：' + (correct ? correct.body : '—') + '</div>';
+        } else if (q.type === 'truefalse') {
+          var tfMap = { 'maru': '○', 'batu': '×' };
+          var cs2 = data.choices.filter(function(c) { return c.question_id === q.id; });
+          var tfCorrect = (cs2.find(function(c) { return c.is_correct; }) || {}).body;
+          var ok2 = entry.correct === true;
+          ansHtml =
+            '<div style="font-size:13px;margin-bottom:4px">回答：<span style="font-weight:700;color:' + (ok2 ? '#2e7d32' : '#bd3c40') + '">' + (tfMap[userAns] || '（未回答）') + '</span> ' +
+              '<span class="pill ' + (ok2 ? 'pill-green' : 'pill-yellow') + '" style="margin-left:6px">' + (ok2 ? '正解' : '不正解') + '</span></div>' +
+            '<div style="font-size:12px;color:#6b7280">正解：' + (tfMap[tfCorrect] || '—') + '</div>';
+        } else {
+          // text
+          var t = textByQ[q.id];
+          var scoreBadge;
+          if (!t) {
+            scoreBadge = '<span class="pill" style="background:#f3f4f6;color:#6b7280">未回答</span>';
+          } else if (t.score === null || t.score === undefined) {
+            scoreBadge = '<span class="pill pill-yellow">採点中</span>';
+          } else {
+            scoreBadge = '<span class="pill pill-green">採点済み ' + t.score + ' / ' + q.point + '点</span>';
+          }
+          ansHtml =
+            '<div style="font-size:13px;margin-bottom:6px">記述式 ' + scoreBadge + '</div>' +
+            '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;font-size:13px;white-space:pre-wrap;line-height:1.6">' + (t ? (t.answer || '（空欄）') : '（未回答）') + '</div>';
+        }
+        return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:10px">' + header + ansHtml + '</div>';
+      }).join('');
+
+      body.innerHTML = items || '<div style="color:#9ca3af">問題がありません</div>';
+      row.style.display = '';
+      btn.textContent = '閉じる';
+    }
+
+    // ============================================
     // 共通ユーティリティ
     // ============================================
     function switchPage(page, btn) {
@@ -3249,6 +3544,7 @@
       document.getElementById('page-' + page).classList.add('active');
       if (page === 'grading') loadAnswers();
       if (page === 'retest')  loadRetest();
+      if (page === 'test-results') loadTestResults();
       if (page === 'member')  loadMembers();
       if (page === 'org')     loadOrg();
       if (page === 'content') loadContent();
