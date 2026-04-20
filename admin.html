@@ -1326,7 +1326,7 @@
             var qRows = setQuestions.length > 0
               ? setQuestions.map(function(q) {
                   return '<tr>' +
-                    '<td>' + q.question + '</td>' +
+                    '<td style="width:100%;white-space:normal;word-break:break-word">' + q.question + '</td>' +
                     '<td style="text-align:right;white-space:nowrap"><span class="pill ' + (typePills[q.type] || 'pill-gray') + '">' + (typeLabels[q.type] || q.type) + '</span></td>' +
                     '<td style="text-align:right;white-space:nowrap">' + (q.point || 0) + '点</td>' +
                     '<td style="text-align:right;white-space:nowrap">' +
@@ -1353,7 +1353,7 @@
                 '</div>' +
               '</div>' +
               '<div class="card-body" style="padding:0">' +
-                '<table><thead><tr><th>問題文</th><th style="text-align:right">形式</th><th style="text-align:right">配点</th><th style="text-align:right"></th><th style="text-align:right"></th></tr></thead>' +
+                '<table><thead><tr><th style="width:100%">問題文</th><th style="text-align:right">形式</th><th style="text-align:right">配点</th><th style="text-align:right"></th><th style="text-align:right"></th></tr></thead>' +
                   '<tbody>' + qRows + '</tbody>' +
                 '</table>' +
               '</div>' +
